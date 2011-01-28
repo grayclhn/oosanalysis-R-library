@@ -1,0 +1,10 @@
+Package: outofsample
+Type: Package
+Title: Functions to compare forecasting models out-of-sample
+Version: 1.0
+Date: 2011-01-28
+Author: Gray Calhoun
+Maintainer: Gray Calhoun <gcalhoun@iastate.edu>
+Description: To write later
+License: What license is it under?
+LazyLoad: yes
