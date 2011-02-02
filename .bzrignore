@@ -5,3 +5,4 @@
 *.so
 FixedWindowPackage
 fwPackage.bzr
+.Rhistory
