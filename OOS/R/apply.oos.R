@@ -1,16 +1,19 @@
-apply.oos <- function(R, d, model, method = "recursive",...) {
+apply.oos <- function(R, d, model, window = c("rolling", "recursive", "fixed"),
+                      ret = c("forecast", "error", "loss"), L = function(x) x^2,...) {
+  window <- match.arg(window)
+  ret <- match.arg(ret)
   n <- nobs(d)
-  switch(method,
+  predfn <- switch(ret, forecast = predict, error = forecast.error, loss = function(...) L(forecast.error(...)))
+  switch(window,
          recursive = sapply((R+1):n, function(s)
-           predict(model(d[seq.int(to = s-1),,drop=FALSE],...),
-                   newdata = d[s,,drop=FALSE])),
+           predfn(model(d[seq.int(to = s-1),,drop=FALSE],...),
+                  newdata = d[s,,drop=FALSE])),
          rolling = sapply((R+1):n, function(s)
-           predict(model(d[seq.int(from = s-R, to = s-1),,drop=FALSE],...),
-                   newdata = d[s,,drop=FALSE])),
+           predfn(model(d[seq.int(from = s-R, to = s-1),,drop=FALSE],...),
+                  newdata = d[s,,drop=FALSE])),
          fixed = {
            m <- model(d[seq.int(to = R),,drop=FALSE],...)
            sapply((R+1):n, function(s)
-                  predict(m, newdata = d[s,,drop=FALSE]))
-         },
-         stop("'", method, "' is an unsupported window type", sep = ""))
+                  predfn(m, newdata = d[s,,drop=FALSE]))
+         })
 }
