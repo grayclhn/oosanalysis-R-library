@@ -27,6 +27,9 @@ oos.t <- function(null.model, alt.model, data, R, L,
 
   df <- c(R, P1)
   names(df) <- c("R", "P")
+  methodText <- paste("One-sample OOS t-test, ", window,
+                      " window (", method, ")", sep = "")
+  data.name = deparse(substitute(data))  
 
   if (method == "DMW") {
     ## use the normal approximation for the DMW test.

@@ -32,7 +32,7 @@ apply.oos(R, d, model,
   forecast errors.}
 \author{Gray Calhoun <gcalhoun@iastate.edu>}
 
-\seealso{\code{\link{nobs}}, \code{\link{forecast.error}}}
+\seealso{\code{\link{nobs-methods}}, \code{\link{forecast.error}}}
 \examples{
 d <- data.frame(x = rnorm(15), y = rnorm(15))
 ols <- function(d) lm(y ~ x, data = d)
