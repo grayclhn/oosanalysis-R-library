@@ -8,9 +8,11 @@
 \usage{
 oos.t(null.model, alt.model, data, R, L,
       window = c("rolling", "recursive", "fixed"),
-      alternative = c("two.sided", "less", "greater"),
-      method = c("DMW", "McC07"), conf.level = 0.95)
+      alternative = "greater", method = c("DMW", "McC07"),
+      conf.level = 0.95)
 }
+
+\details{}
 
 \arguments{
   \item{null.model}{A function that takes 'data' as an argument and
@@ -23,8 +25,12 @@ oos.t(null.model, alt.model, data, R, L,
   \item{L}{A loss function that takes a single argument, the forecast error.}
   \item{window}{One of "rolling", "recursive", or "fixed", to indicate
   the estimation strategy.}
-  \item{alternative}{Indicates whether the alternative is two sided or
-  one sided.}
+  \item{alternative}{One of "two.sided", "less", or "greater",
+    indicating whether the alternative is two sided or
+  one sided.  Note that the null hypothesis is \deqn{E L(m.null) - E
+  L(m.alt) = 0} so you almost always want the alternative \deqn{E
+  L(m.null) - E L(m.alt) \geq 0,} which corresponds to "greater" and
+  means that the alternative is more accurate.}
   \item{method}{Method for constructing critical values.  "DMW"
   indicates that we should use naive Gaussian critical values.  "McC07"
   uses critical values based on McCracken's (2007, Journal of
@@ -52,4 +58,25 @@ oos.t(null.model, alt.model, data, R, L,
 
 \seealso{\code{\link{apply.oos}},\code{\link{t.test}}}
 
-\examples{}
+\examples{
+check <- function(a,b,...) stopifnot(all.equal(a,b,check.attributes = FALSE,...))
+
+L <- function(x) x^2
+d <- data.frame(x = rnorm(20), y = rnorm(20))
+R <- 15
+
+null.model <- function(d) lm(y ~ 1, data = d)
+alt.model  <- function(d) lm(y ~ x, data = d)
+
+L.null <- L(apply.oos(R, d, null.model, "rolling", "error"))
+L.alt  <- L(apply.oos(R, d, alt.model,  "rolling", "error"))
+
+tstat <- t.test(L.null - L.alt)
+oos.tstat <- oos.t(null.model, alt.model, d, R, L, "rolling",
+                   "two.sided", "DMW")
+
+check(tstat$statistic, oos.tstat$statistic)
+check(tstat$p.value,   oos.tstat$p.value)
+check(tstat$conf.int,  oos.tstat$conf.int)
+check(tstat$estimate,  oos.tstat$estimate)
+}

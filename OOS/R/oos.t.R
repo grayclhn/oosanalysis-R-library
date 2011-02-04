@@ -4,12 +4,13 @@
 
 oos.t <- function(null.model, alt.model, data, R, L,
                   window = c("rolling", "recursive", "fixed"),
-                  alternative = c("two.sided", "less", "greater"),
+                  alternative = "greater",
                   method = c("DMW", "McC07"),
                   conf.level = 0.95) {
   window <- match.arg(window)
-  alternative <- match.arg(alternative)
   method <- match.arg(method)
+  if (alternative != "greater")
+    warning("The alternative almost always be 'greater.'  Are you sure?")
 
   ## If alt.model is a list, we want to return a list; otherwise we're
   ## going to return a single statistic.  returnList is the boolean
@@ -33,8 +34,8 @@ oos.t <- function(null.model, alt.model, data, R, L,
 
   if (method == "DMW") {
     ## use the normal approximation for the DMW test.
-    pfn <- function(x,...) pnorm(x,...)
-    qfn <- function(x,...) qnorm(x,...)
+    pfn <- function(x,...) pt(x, df = P1-1, ...)
+    qfn <- function(x,...) qt(x, df = P1-1, ...)
   } else stop("That method is not yet supported")
 
   ## taken basically from the t-test source code
@@ -52,13 +53,15 @@ oos.t <- function(null.model, alt.model, data, R, L,
       attr(ret, "conf.level") <- conf.level
       ret
     }
-  } else {
+  } else if (alternative == "two.sided") {
     pval <- function(tstat) 2 * pfn(- abs(tstat))
     cint <- function(mx, std) {
       ret <- qfn(0.5 * (1 + conf.level))
       ret <- mx + std * c(-ret, ret)
       attr(ret, "conf.level") <- conf.level
       ret
+    } else {
+      stop("Invalid choice for 'alternative'.")
     }
   }
     

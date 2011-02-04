@@ -16,7 +16,7 @@
 \value{A vector of length nobs(newdata), containing the prediction errors.}
 \author{Gray Calhoun <gcalhoun@iastate.edu>}
 
-\seealso{\code{\link{predict}}, \code{\link{nobs-methods}}}
+\seealso{\code{\link{predict}}, \code{\link{nobs}}}
 \examples{
 
 d    <- data.frame(y = rnorm(10), x = rnorm(10))
