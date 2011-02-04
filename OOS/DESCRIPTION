@@ -5,6 +5,8 @@ Version: 0.01
 Date: 2011-01-28
 Author: Gray Calhoun
 Maintainer: Gray Calhoun <gcalhoun@iastate.edu>
-Description: To write later
-License: What license is it under?
+Description: Functions for out-of-sample analysis
+Depends: methods
+Suggests: zoo
+License: GPL
 LazyLoad: yes

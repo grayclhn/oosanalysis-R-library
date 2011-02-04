@@ -2,11 +2,91 @@
 ## 'd' and returns an object with a 'predict' method
 ## alt.model: a single or list of models of the same type as 'null.model'
 
-oos.t <- function(null.model, alt.model, data, data2 = NULL,
+oos.t <- function(null.model, alt.model, data,
                   window = c("rolling", "recursive", "fixed"),
                   alternative = c("two.sided", "less", "greater"),
                   method = c("DMW", "McC07"),
                   L, R, conf.level = 0.95) {
+  window <- match.arg(window)
+  alternative <- match.arg(alternative)
+  method <- match.arg(method)
+
+  ## If alt.model is a list, we want to return a list; otherwise we're
+  ## going to return a single statistic.  returnList is the boolean
+  ## that indicates whether or not we should return a list.
+  returnList <- is.list(alt.model)
+  if (!returnList) alt.model <- list(a = alt.model)
+
+  ## forecast errors for the benchmark model
+  null.errors <- apply.oos(R, data, null.model, window, ret = "error")
+  P1 <- length(null.errors)
+  ## calculate the forecast errors for each of the alternative models
+  ## difference between the benchmark
+  loss.diff <- lapply(alt.model, function(alt) L(null.errors) -
+                      L(apply.oos(R, data, alt, window, ret = "error")))
+
+  df <- c(R, P1)
+  names(df) <- c("R", "P")
+
+  if (method == "DMW") {
+    ## use the normal approximation for the DMW test.
+    pfn <- function(x,...) pnorm(x,...)
+    qfn <- function(x,...) qnorm(x,...)
+  } else stop("That method is not yet supported")
+
+  ## taken basically from the t-test source code
+  if (alternative == "less") {
+    pval <- function(tstat) pfn(tstat)
+    cint <- function(mx, std) {
+      ret <- mx + std * c(-Inf, qfn(conf.level))
+      attr(ret, "conf.level") <- conf.level
+      ret
+    }
+  } else if (alternative == "greater") {
+    pval <- function(tstat) pfn(tstat, lower.tail = FALSE)
+    cint <- function(mx, std) {
+      ret <- mx + std * c(- qfn(conf.level), Inf)
+      attr(ret, "conf.level") <- conf.level
+      ret
+    }
+  } else {
+    pval <- function(tstat) 2 * pfn(- abs(tstat))
+    cint <- function(mx, std) {
+      ret <- qfn(0.5 * (1 + conf.level))
+      ret <- mx + std * c(-ret, ret)
+      attr(ret, "conf.level") <- conf.level
+      ret
+    }
+  }
+    
+  ## actually calculate the oos t-statistic for each sequence of loss
+  ## differences.
+  tstats <- lapply(seq_along(loss.diff), function(x) {
+    mx <- mean(loss.diff[[x]])
+    estimate <- mx
+    names(estimate) <- "OOS Avg. 1"
+
+    sdx <- sd(loss.diff[[x]])
+    ooststat <- sqrt(P1) * mx / sdx
+    names(ooststat) <- "oos-t"
+    std <- sdx / sqrt(P1)
+    
+    rval <- list(statistic = ooststat, parameter = df, p.value = pval(mx / std),
+                 conf.int = cint(mx, std), estimate = estimate,
+                 null.value = 0, alternative = alternative,
+                 method = methodText, data.name = data.name)
+    class(rval) <- "htest"
+    rval})
+  
+  if (!returnList) tstats <- tstats[[1]]
+  tstats
+}
+
+oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
+                   window = c("rolling", "recursive", "fixed"),
+                   alternative = c("two.sided", "less", "greater"),
+                   method = c("DMW", "McC07"),
+                   L, R, conf.level = 0.95) {
   window <- match.arg(window)
   alternative <- match.arg(alternative)
   method <- match.arg(method)

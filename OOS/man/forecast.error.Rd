@@ -3,15 +3,13 @@
 \title{Forecast Errors}
 \description{'forecast.error' uses the 'predict' method to calculate a
   model's forecast error on a new dataset.}
-\usage{
-forecast.error(object, newdata, ...)
-}
+\usage{forecast.error(object, newdata, ...)}
 
 \arguments{
   \item{object}{a model object that has a 'predict' method.}
   \item{newdata}{a data.frame to use for new predictions.}
   \item{\dots}{additional arguments to pass to 'predict'.}}
-}
+
 \details{This function is designed to automatically get the forecast
   errors associated with a prediction.  It is based on predict.lm, so
   errors may come up when it is used for other models.}

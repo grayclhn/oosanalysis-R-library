@@ -5,7 +5,9 @@
 \description{Creates a sequence of out-of-sample forecasts or forecast errors
 }
 \usage{
-apply.oos(R, d, model, window = c("rolling", "recursive", "fixed"), ret = c("forecast", "error"), ...)
+apply.oos(R, d, model,
+          window = c("rolling", "recursive", "fixed"),
+          ret = c("forecast", "error"), ...)
 }
 \arguments{
   \item{R}{An integer: the size of the estimation window.}

@@ -6,6 +6,7 @@ zipfile := $(package)_$(version).tar.gz
 
 all: build Install Online
 build: $(zipfile)
+$(zipfile): Check
 	R CMD build $(package)
 
 Install: $(zipfile)
