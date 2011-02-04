@@ -2,11 +2,11 @@
 ## 'd' and returns an object with a 'predict' method
 ## alt.model: a single or list of models of the same type as 'null.model'
 
-oos.t <- function(null.model, alt.model, data,
+oos.t <- function(null.model, alt.model, data, R, L,
                   window = c("rolling", "recursive", "fixed"),
                   alternative = c("two.sided", "less", "greater"),
                   method = c("DMW", "McC07"),
-                  L, R, conf.level = 0.95) {
+                  conf.level = 0.95) {
   window <- match.arg(window)
   alternative <- match.arg(alternative)
   method <- match.arg(method)
