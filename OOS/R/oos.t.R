@@ -110,15 +110,19 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
     ## the second oos period.  We have to handle the rolling window
     ## differently than the fixed or recursive window, since R doesn't
     ## change for the rolling window.
+    cboth <- intersect(colnames(data), colnames(data2))
     if (window == "rolling") {
-      data <- data[seq.int(to = nobs(data), length = R), ,drop = FALSE]
+      dfull <- rbind(subset(data[seq.int(to = nobs(data), length = R), ,drop = FALSE], select = cboth),
+                     subset(data2, select = cboth))
       R2 <- R
     } else {
+      dfull <- rbind(subset(data, select = cboth), subset(data2, select = cboth))
       R2 <- nobs(data)
     }
-    null.errors2 <- apply.oos(R2, rbind(data, data2), null.model, window, ret = "error")
+    
+    null.errors2 <- apply.oos(R2, dfull, null.model, window, ret = "error")
     loss.diff2 <- lapply(alt.model, function(alt) L(null.errors2)
-                         - L(apply.oos(R2, rbind(data, data2), alt, window, ret = "error")))
+                         - L(apply.oos(R2, dfull, alt, window, ret = "error")))
     data.name = c(deparse(substitute(data)), deparse(substitute(data2)))
     methodText = paste("Two-sample OOS t-test, ", window, " window (", method, ")", sep = "")
   } else {

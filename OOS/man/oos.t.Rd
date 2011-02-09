@@ -30,7 +30,7 @@ oos.t2(null.model, alt.model, data,
 
 \item{data}{A data frame.}
 
-\item{data}{A second data frame with the same variables as the first, to
+\item{data2}{A second data frame with the same variables as the first, to
   calculate a second out-of-sample average.}
 
 \item{R}{The number of observations in the estimation window.  This
