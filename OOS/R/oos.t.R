@@ -60,9 +60,9 @@ oos.t <- function(null.model, alt.model, data, R, L,
       ret <- mx + std * c(-ret, ret)
       attr(ret, "conf.level") <- conf.level
       ret
-    } else {
-      stop("Invalid choice for 'alternative'.")
     }
+  } else {
+    stop("Invalid choice for 'alternative'.")
   }
     
   ## actually calculate the oos t-statistic for each sequence of loss

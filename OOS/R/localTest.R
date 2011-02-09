@@ -20,17 +20,26 @@ localTest <- function(y, x, x2.index, method = c("homoskedastic", "heteroskedast
   
   n       <- length(y)
   k       <- ncol(x)
-  k2 <- if (is.logical(x2.index)) sum(x2.index) else length(x2.index)
+  if (is.logical(x2.index)) {
+    x1.index <- !x2.index
+    k2 <- sum(x2.index)
+  } else {
+    x1.index <- -x2.index
+    k2 <- length(x2.index)
+  }
+  
   ols     <- lm.fit(y = y, x)
   b2.hat  <- coef(ols)[x2.index]
   Sigma.x <- crossprod(x) / n
   F2.inv  <- (Sigma.x[x2.index, x2.index] -
-              crossprod(Sigma.x[-x2.index, x2.index], solve(Sigma.x[-x2.index, -x2.index], Sigma.x[-x2.index, x2.index])))
+              crossprod(Sigma.x[x1.index, x2.index, drop = FALSE],
+                        solve(Sigma.x[x1.index, x1.index, drop = FALSE],
+                              Sigma.x[x1.index, x2.index, drop = FALSE])))
   
   drop(crossprod(b2.hat, crossprod(F2.inv, b2.hat)) -
        switch(method,
               homoskedastic = {
-                sigma2.hat <- crossprod(resid(ols)) / (n - k1 - k2)
+                sigma2.hat <- crossprod(resid(ols)) / (n - k)
                 k2 * sigma2.hat
               },
               heteroskedastic = {
