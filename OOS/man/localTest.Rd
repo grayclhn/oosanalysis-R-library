@@ -40,20 +40,14 @@ y <- rnorm(n)
 localTest(y, x, c(3), "homoskedastic")
 localTest(y, x, c(3), "heteroskedastic")
 
-rmc <- function(n, b, sigma = 1) {
-  k <- length(b)
-  x <- cbind(1, matrix(rnorm(n * (k-1)), n, k-1))
-  y <- x %*% b + rnorm(n, 0, sigma)
-  list(y = y, x = x)
-}
-
 ## quick simulation
 n <- 300
 nsim <- 1000
 
 dmc <- replicate(1000, {
-  d <- rmc(n, c(0,1))
-  localTest(d$y, d$x, 2, "homoskedastic")
+  x <- cbind(1, matrix(rnorm(n * (k-1)), n, k-1))
+  y <- rnorm(n)
+  localTest(y, x, 2, "hom")
 })
 
 ## estimated size of a test at 10%
