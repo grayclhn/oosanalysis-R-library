@@ -105,7 +105,9 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
   P1 <- length(null.errors)
   loss.diff <- lapply(alt.model, function(alt) L(null.errors) - L(apply.oos(R, data, alt, window, ret = "error")))
 
-  if (!is.null(data2) & P2 <= nobs(data2)) {
+  ## The '&&' is important (instead of '&') so that we don't evaluate
+  ## nobs(data2) if data2 is NULL.
+  if (!is.null(data2) && P2 <= nobs(data2)) {
     ## if data2 is supplied, we calculate the out-of-sample loss over
     ## the second oos period.  We have to handle the rolling window
     ## differently than the fixed or recursive window, since R doesn't
