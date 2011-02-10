@@ -105,18 +105,18 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
   P1 <- length(null.errors)
   loss.diff <- lapply(alt.model, function(alt) L(null.errors) - L(apply.oos(R, data, alt, window, ret = "error")))
 
-  if (!is.null(data2)) {
+  if (!is.null(data2) & P2 <= nobs(data2)) {
     ## if data2 is supplied, we calculate the out-of-sample loss over
     ## the second oos period.  We have to handle the rolling window
     ## differently than the fixed or recursive window, since R doesn't
     ## change for the rolling window.
     cboth <- intersect(colnames(data), colnames(data2))
     if (window == "rolling") {
-      dfull <- rbind(subset(data[seq.int(to = nobs(data), length = R), ,drop = FALSE], select = cboth),
-                     subset(data2, select = cboth))
+      dfull <- rbind(subset(data[seq.int(to=nobs(data), length=R),,drop=FALSE], select=cboth),
+                     subset(data2[seq.int(to=P2),,drop=FALSE], select=cboth))
       R2 <- R
     } else {
-      dfull <- rbind(subset(data, select = cboth), subset(data2, select = cboth))
+      dfull <- rbind(subset(data, select = cboth), subset(data2[seq.int(to=P2),,drop=FALSE], select = cboth))
       R2 <- nobs(data)
     }
     
