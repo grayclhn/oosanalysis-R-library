@@ -103,25 +103,33 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
 
   returnList <- is.list(alt.model)
   if (!returnList) alt.model <- list(a = alt.model)
+  if (R >= nobs(data)) stop("'R' is larger than the dataset")
+  data <- as.ts(data)
   
   null.errors <- apply.oos(R, data, null.model, window, ret = "error")
   P1 <- length(null.errors)
-  loss.diff <- lapply(alt.model, function(alt) L(null.errors) - L(apply.oos(R, data, alt, window, ret = "error")))
+  loss.diff <- lapply(alt.model, function(alt) L(null.errors)
+                      - L(apply.oos(R, data, alt, window, ret = "error")))
 
   ## The '&&' is important (instead of '&') so that we don't evaluate
   ## nobs(data2) if data2 is NULL.
   if (!is.null(data2) && P2 <= nobs(data2)) {
+    data2 <- as.ts(data2)
     ## if data2 is supplied, we calculate the out-of-sample loss over
     ## the second oos period.  We have to handle the rolling window
     ## differently than the fixed or recursive window, since R doesn't
-    ## change for the rolling window.
+    ## change for the rolling window.  This is kind of a bitch
+    ## notationally if you need to allow for dynamic models.
+    dindex <- time(data)
     cboth <- intersect(colnames(data), colnames(data2))
+    dfull <- ts(rbind(data[, cboth, drop=FALSE],
+                      window(data2[, cboth, drop=FALSE],
+                             end = time(data2)[P2])),
+                start = dindex[1], frequency = frequency(data))
     if (window == "rolling") {
-      dfull <- rbind(subset(data[seq.int(to=nobs(data), length=R),,drop=FALSE], select=cboth),
-                     subset(data2[seq.int(to=P2),,drop=FALSE], select=cboth))
+      dfull <- window(dfull, start = dindex[nobs(data)-R+1])
       R2 <- R
     } else {
-      dfull <- rbind(subset(data, select = cboth), subset(data2[seq.int(to=P2),,drop=FALSE], select = cboth))
       R2 <- nobs(data)
     }
     

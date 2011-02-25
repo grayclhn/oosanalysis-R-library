@@ -3,17 +3,28 @@ apply.oos <- function(R, d, model, window = c("rolling", "recursive", "fixed"),
   window <- match.arg(window)
   ret <- match.arg(ret)
   n <- nobs(d)
+  d <- as.ts(d)
+  dindex <- time(d)
   predfn <- switch(ret, forecast = predict, error = forecast.error)
+  ## note that in all of the switch statements, we're going to let
+  ## 'newdata' include the training sample, and then just take the
+  ## last forecast or forecast error.  This is so that dynamic models
+  ## can get their regressors from the training sample.  For the same
+  ## reason, we make everything a time series and use windows, instead
+  ## of subsetting (for some reason, time series objects lose their
+  ## time series properties after subsetting, which is kind of
+  ## annoying).
   switch(window,
          recursive = sapply((R+1):n, function(s)
-           predfn(model(d[seq.int(to = s-1),,drop=FALSE],...),
-                  newdata = d[s,,drop=FALSE])),
+           tail(predfn(model(window(d, end = dindex[s-1]),...),
+                  newdata = window(d, end = dindex[s])), 1)),
          rolling = sapply((R+1):n, function(s)
-           predfn(model(d[seq.int(from = s-R, to = s-1),,drop=FALSE],...),
-                  newdata = d[s,,drop=FALSE])),
+           tail(predfn(model(window(d, start = dindex[s-R],
+                                    end = dindex[s-1]),...),
+                       newdata = window(d, end = dindex[s])), 1)),
          fixed = {
-           m <- model(d[seq.int(to = R),,drop=FALSE],...)
+           m <- model(window(d, end = dindex[R]),...)
            sapply((R+1):n, function(s)
-                  predfn(m, newdata = d[s,,drop=FALSE]))
+                  tail(predfn(m, newdata = window(d, end = dindex[s])), 1))
          })
 }
