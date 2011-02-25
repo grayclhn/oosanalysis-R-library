@@ -25,7 +25,8 @@ htest.finish <- function(rval, estimate, estimate.text, statistic,
 ## 'd' and returns an object with a 'predict' method
 ## alt.model: a single or list of models of the same type as 'null.model'
 
-oos.t <- function(null.model, alt.model, data, R, L,
+oos.t <- function(null.model, alt.model, data, R,
+                  L = function(x) x^2,
                   window = c("rolling", "recursive", "fixed"),
                   method = c("DMW", "McC07"), alternative = "greater",
                   conf.level = 0.95) {
@@ -91,8 +92,10 @@ oos.t <- function(null.model, alt.model, data, R, L,
 }
 
 oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
-                   R, P2 = nobs(data2), L, window = c("rolling", "recursive", "fixed"),
-                   method = c("DMW", "McC07"), alternative = "greater", conf.level = 0.95) {
+                   R, P2 = nobs(data2), L = function(x) x^2,
+                   window = c("rolling", "recursive", "fixed"),
+                   method = c("DMW", "McC07"), alternative = "greater",
+                   conf.level = 0.95) {
   window <- match.arg(window)
   method <- match.arg(method)
   if (alternative != "greater")

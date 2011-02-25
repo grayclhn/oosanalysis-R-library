@@ -6,13 +6,15 @@
 \description{Calculates the out-of-sample t test.}
 
 \usage{
-oos.t(null.model, alt.model, data, R, L,
+oos.t(null.model, alt.model, data, R,
+      L = function(x) x^2,
       window = c("rolling", "recursive", "fixed"),
       method = c("DMW", "McC07"), alternative = "greater", 
       conf.level = 0.95)
 
 oos.t2(null.model, alt.model, data,
-       data2 = NULL, R, P2 = nobs(data2), L,
+       data2 = NULL, R, P2 = nobs(data2),
+       L = function(x) x^2,
        window = c("rolling", "recursive", "fixed"),
        method = c("DMW", "McC07"), alternative = "greater",
        conf.level = 0.95)
