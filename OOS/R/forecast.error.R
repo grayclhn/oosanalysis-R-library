@@ -7,7 +7,8 @@ forecast.error <- function(object, newdata,...) {
   tt <- terms(object)
   Y.new <- model.response(model.frame(tt, newdata))
   if (is.ts(newdata)) {
-    Y.new <- as.ts(Y.new, start = start(newdata), frequency = frequency(newdata))
+    Y.new <- ts(Y.new, start = start(newdata),
+                frequency = frequency(newdata))
   }
   Y.hat <- predict(object, newdata,...)
   Y.new - Y.hat

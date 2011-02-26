@@ -1,4 +1,5 @@
-apply.oos <- function(R, d, model, window = c("rolling", "recursive", "fixed"),
+apply.oos <- function(R, d, model,
+                      window = c("rolling", "recursive", "fixed"),
                       ret = c("forecast", "error"),...) {
   window <- match.arg(window)
   ret <- match.arg(ret)

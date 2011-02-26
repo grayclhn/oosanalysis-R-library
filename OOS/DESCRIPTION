@@ -7,6 +7,6 @@ Author: Gray Calhoun
 Maintainer: Gray Calhoun <gcalhoun@iastate.edu>
 Description: Functions for out-of-sample analysis
 Depends: methods
-Suggests: zoo
+Suggests: zoo, dyn
 License: GPL
 LazyLoad: yes

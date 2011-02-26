@@ -121,4 +121,10 @@ oos.t(null.model, list(a = alt.modelx, y = alt.modelz),
 d2 <- data.frame(x = rnorm(60), y = rnorm(60))
 oos.t2(null.model, alt.modelx, d, data2 = d2, R = R, L = L,
        window = "rolling", method = "DMW")
+
+## works with dynamic models too!
+library(dyn)
+dyn.model <- function(d) lm(y ~ lag(y, -2), data = d)
+oos.t2(null.model, dyn.model, d, data2 = d2, R = R, L = L,
+       window = "rolling", method = "DMW")
 }

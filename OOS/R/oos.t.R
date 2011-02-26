@@ -40,6 +40,9 @@ oos.t <- function(null.model, alt.model, data, R,
   ## that indicates whether or not we should return a list.
   returnList <- is.list(alt.model)
   if (!returnList) alt.model <- list(a = alt.model)
+  if (R >= nobs(data)) stop("'R' is larger than the dataset")
+  data.name <- deparse(substitute(data))
+  data <- as.ts(data)
 
   ## forecast errors for the benchmark model
   null.errors <- apply.oos(R, data, null.model, window, ret = "error")
@@ -48,11 +51,13 @@ oos.t <- function(null.model, alt.model, data, R,
   ## difference between the benchmark
   loss.diff <- lapply(alt.model, function(alt) L(null.errors) -
                       L(apply.oos(R, data, alt, window, ret = "error")))
+  rm(null.errors)
 
   ## start building the 'htest' object we'll return
   rval <- htest.start("E(L.alt)", "E(L.null)", c(R, P1), c("R", "P"),
-                      paste("One-sample OOS t-test, ", window, " window (", method, ")", sep = ""),
-                      deparse(substitute(data)), alternative)
+                      paste("One-sample OOS t-test, ", window,
+                            " window (", method, ")", sep = ""),
+                      data.name, alternative)
 
   if (method == "DMW") {
     ## use the t approximation for the DMW test so that the numbers
@@ -104,16 +109,19 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
   returnList <- is.list(alt.model)
   if (!returnList) alt.model <- list(a = alt.model)
   if (R >= nobs(data)) stop("'R' is larger than the dataset")
+  data.name <- deparse(substitute(data))
   data <- as.ts(data)
   
   null.errors <- apply.oos(R, data, null.model, window, ret = "error")
   P1 <- length(null.errors)
   loss.diff <- lapply(alt.model, function(alt) L(null.errors)
                       - L(apply.oos(R, data, alt, window, ret = "error")))
-
+  rm(null.errors)
+  
   ## The '&&' is important (instead of '&') so that we don't evaluate
   ## nobs(data2) if data2 is NULL.
   if (!is.null(data2) && P2 <= nobs(data2)) {
+    data.name <- c(data.name, deparse(substitute(data2)))
     data2 <- as.ts(data2)
     ## if data2 is supplied, we calculate the out-of-sample loss over
     ## the second oos period.  We have to handle the rolling window
@@ -136,11 +144,9 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
     null.errors2 <- apply.oos(R2, dfull, null.model, window, ret = "error")
     loss.diff2 <- lapply(alt.model, function(alt) L(null.errors2)
                          - L(apply.oos(R2, dfull, alt, window, ret = "error")))
-    data.name = c(deparse(substitute(data)), deparse(substitute(data2)))
-    methodText = paste("Two-sample OOS t-test, ", window, " window (", method, ")", sep = "")
+    methodText <- paste("Two-sample OOS t-test, ", window, " window (", method, ")", sep = "")
   } else {
-    data.name = deparse(substitute(data))  
-    methodText = paste("One-sample OOS t-test, ", window, " window (", method, ")", sep = "")
+    methodText <- paste("One-sample OOS t-test, ", window, " window (", method, ")", sep = "")
   }
 
   rval <- htest.start("L.alt-bar", "L.null-bar", c(R, P1, P2), c("R", "P1", "P2"),
@@ -160,12 +166,12 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
     qfn <- function(x,...) qt(x, df = P1-1,...)
   } else stop("That method is not yet supported")
 
-  if (alternative == "less") {
-    pval <- function(tstat) pfn(tstat)
-    cint <- function(mx, std) mx + std * c(-Inf, qfn(conf.level))
-  } else if (alternative == "greater") {
+  if (alternative == "greater") {
     pval <- function(tstat) pfn(tstat, lower.tail = FALSE)
     cint <- function(mx, std) mx + std * c(- qfn(conf.level), Inf)
+  } else if (alternative == "less") {
+    pval <- function(tstat) pfn(tstat)
+    cint <- function(mx, std) mx + std * c(-Inf, qfn(conf.level))
   } else {
     pval <- function(tstat) 2 * pfn(- abs(tstat))
     cint <- function(mx, std) mx + std * c(-1, 1) * qfn(0.5 * (1 + conf.level))
