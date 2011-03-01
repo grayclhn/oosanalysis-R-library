@@ -1,19 +1,19 @@
-rmcc <-
-function(n, k, rtRatio, window, ngrain = 400)
-{
+rmcc <- function(rtRatio, k, nsims = 600, ngrain = 600,
+                 window = c("fixed", "recursive", "rolling")) {
+  window <- match.arg(window)
   ## startVals is the rtRatio, but rescaled so that it applies for
-  ## ngrain -- we also ensure that startVals is positive.
+  ## ngrain -- we also ensure that startVals is positive.  
   startVals <- sapply(floor(rtRatio * ngrain), function(x) max(x, 1))
   rvPair <- switch(window,
-                   "fixed"     = rmcc.fixed(    startVals, k, n, ngrain),
-                   "rolling"   = rmcc.rolling(  startVals, k, n, ngrain),
-                   "expanding" = rmcc.expanding(startVals, k, n, ngrain),
+                   "fixed"     = rmcc.fixed(startVals, k, nsims, ngrain),
+                   "rolling"   = rmcc.rolling(startVals, k, nsims, ngrain),
+                   "recursive" = rmcc.recursive(startVals, k, nsims, ngrain),
                    stop("Invalid window type"))
   list(numerator = rvPair$gam1 - 0.5 * rvPair$gam2,
        denominator = sqrt(rvPair$gam2))
 }
 
-rmcc.expanding <- function(startVals, k, nsims, ngrain) {
+rmcc.recursive <- function(startVals, k, nsims, ngrain) {
 
   dw <- array(rnorm(k * ngrain * nsims, mean = 0, sd = 1/sqrt(ngrain)),
               c(ngrain, nsims, k))
