@@ -1,19 +1,19 @@
-rNested <-
+rmcc <-
 function(n, k, rtRatio, window, ngrain = 400)
 {
   ## startVals is the rtRatio, but rescaled so that it applies for
   ## ngrain -- we also ensure that startVals is positive.
   startVals <- sapply(floor(rtRatio * ngrain), function(x) max(x, 1))
   rvPair <- switch(window,
-                   "fixed"     = rFixedMccracken(    startVals, k, n, ngrain),
-                   "rolling"   = rRollingMccracken(  startVals, k, n, ngrain),
-                   "expanding" = rExpandingMccracken(startVals, k, n, ngrain),
+                   "fixed"     = rmcc.fixed(    startVals, k, n, ngrain),
+                   "rolling"   = rmcc.rolling(  startVals, k, n, ngrain),
+                   "expanding" = rmcc.expanding(startVals, k, n, ngrain),
                    stop("Invalid window type"))
   list(numerator = rvPair$gam1 - 0.5 * rvPair$gam2,
        denominator = sqrt(rvPair$gam2))
 }
 
-rExpandingMccracken <- function(startVals, k, nsims, ngrain) {
+rmcc.expanding <- function(startVals, k, nsims, ngrain) {
 
   dw <- array(rnorm(k * ngrain * nsims, mean = 0, sd = 1/sqrt(ngrain)),
               c(ngrain, nsims, k))
@@ -32,7 +32,7 @@ rExpandingMccracken <- function(startVals, k, nsims, ngrain) {
   list(gam1 = gam1, gam2 = gam2)
 }
 
-rFixedMccracken <-  function(startVals, k, nsims, ngrain) {
+rmcc.fixed <-  function(startVals, k, nsims, ngrain) {
 
   dw <- array(rnorm(k * ngrain * nsims, mean = 0, sd = 1/sqrt(ngrain)),
               c(ngrain, nsims, k))
@@ -50,7 +50,7 @@ rFixedMccracken <-  function(startVals, k, nsims, ngrain) {
   list(gam1 = gam1, gam2 = gam2)
 }
   
-rRollingMccracken <- function(startVals, k, nsims, ngrain) {
+rmcc.rolling <- function(startVals, k, nsims, ngrain) {
 
   ## generate the brownian motion increments
   dw <- array(rnorm(k * ngrain * nsims, mean = 0, sd = 1/sqrt(ngrain)),
