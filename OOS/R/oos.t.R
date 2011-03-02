@@ -46,15 +46,10 @@ oos.t <- function(null.model, alt.model, data, R,
 
   ## forecast errors for the benchmark model
   null.errors <- apply.oos(R, data, null.model, window, ret = "error")
-  P1 <- length(null.errors)
-  ## calculate the forecast errors for each of the alternative models
-  ## difference between the benchmark
-  loss.diff <- lapply(alt.model, function(alt) L(null.errors) -
-                      L(apply.oos(R, data, alt, window, ret = "error")))
-  rm(null.errors)
+  P <- length(null.errors)
 
   ## start building the 'htest' object we'll return
-  rval <- htest.start("E(L.alt)", "E(L.null)", c(R, P1), c("R", "P"),
+  rval <- htest.start("E(L.alt)", "E(L.null)", c(R, P), c("R", "P"),
                       paste("One-sample OOS t-test, ", window,
                             " window (", method, ")", sep = ""),
                       data.name, alternative)
@@ -62,35 +57,46 @@ oos.t <- function(null.model, alt.model, data, R,
   if (method == "DMW") {
     ## use the t approximation for the DMW test so that the numbers
     ## are consistent with t.test.
-    pfn <- function(x,...) pt(x, df = P1-1, ...)
-    qfn <- function(x,...) qt(x, df = P1-1, ...)
-  } else stop("That method is not yet supported")
+    pfn <- function(x,...) pt(x, df = P-1, ...)
+    qfn <- function(x,...) qt(x, df = P-1, ...)
+  } else {
+    pfn <- function(x,...) pmccracken.1(x, ..., rtRatio = R/(R+P),
+                                        window = window)
+    qfn <- function(x,...) qmccracken.1(x, ..., rtRatio = R/(R+P),
+                                        window = window)
+  }
 
   ## It's convenient to define different functions to calculate the
   ## p.value and the confidence intervals outside the coming 'lapply',
   ## so we only need to do it once.
-  if (alternative == "less") {
-    pval <- function(tstat) pfn(tstat)
-    cint <- function(mx, std)  mx + std * c(-Inf, qfn(conf.level))
-  } else if (alternative == "greater") {
-    pval <- function(tstat) pfn(tstat, lower.tail = FALSE)
-    cint <- function(mx, std) mx + std * c(- qfn(conf.level), Inf)
+  if (alternative == "greater") {
+    pval <- function(tstat,...) pfn(tstat, lower.tail = FALSE,...)
+    cint <- function(mx, std,...) mx + std * c(- qfn(conf.level,...), Inf)
   } else if (alternative == "two.sided") {
-    pval <- function(tstat) 2 * pfn(- abs(tstat))
-    cint <- function(mx, std) mx + std * c(-1, 1) * qfn(0.5 * (1 + conf.level))
+    pval <- function(tstat,...) 2 * pfn(- abs(tstat),...)
+    cint <- function(mx, std,...) mx + std * c(qfn(conf.level/2,...)
+                                               qfn(0.5 * (1 + conf.level),...))
+  } else if (alternative == "less") {
+    pval <- function(tstat,...) pfn(tstat,...)
+    cint <- function(mx, std,...)  mx + std * c(-Inf, qfn(conf.level,...))
   } else {
     stop("Invalid choice for 'alternative'.")
   }
     
   ## actually calculate the oos t-statistic for each sequence of loss
   ## differences.
-  tstats <- lapply(seq_along(loss.diff), function(x) {
-    mx <- mean(loss.diff[[x]])
-    std <- sd(loss.diff[[x]]) / sqrt(P1)
+  k.null <- ncol(model.matrix(null.model))
+  tstats <- lapply(alt.model, function(alt) {
+    loss.diff <- (L(null.errors) -
+                  L(apply.oos(R, data, alt, window, ret = "error")))
+    kdiff <- ncol(model.matrix(alt)) - k.null
+    mx <- mean(loss.diff)
+    std <- sd(loss.diff) / sqrt(P)
 
     htest.finish(rval, mx, "OOS Avg. 1", mx/std, "oos-t",
-                 pval(mx/std), cint(mx, std), conf.level)
-    })
+                 pval(mx/std, k = kdiff), cint(mx, std, k = kdiff),
+                 conf.level)
+  })
   
   if (!returnList) tstats <- tstats[[1]]
   tstats
@@ -114,9 +120,6 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
   
   null.errors <- apply.oos(R, data, null.model, window, ret = "error")
   P1 <- length(null.errors)
-  loss.diff <- lapply(alt.model, function(alt) L(null.errors)
-                      - L(apply.oos(R, data, alt, window, ret = "error")))
-  rm(null.errors)
   
   ## The '&&' is important (instead of '&') so that we don't evaluate
   ## nobs(data2) if data2 is NULL.
@@ -140,11 +143,8 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
     } else {
       R2 <- nobs(data)
     }
-    
-    null.errors2 <- apply.oos(R2, dfull, null.model, window, ret = "error")
-    loss.diff2 <- lapply(alt.model, function(alt) L(null.errors2)
-                         - L(apply.oos(R2, dfull, alt, window, ret = "error")))
     methodText <- paste("Two-sample OOS t-test, ", window, " window (", method, ")", sep = "")
+    null.errors2 <- apply.oos(R2, dfull, null.model, window, ret = "error")
   } else {
     methodText <- paste("One-sample OOS t-test, ", window, " window (", method, ")", sep = "")
   }
@@ -164,30 +164,46 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
     ## approximations.
     pfn <- function(x,...) pt(x, df = P1-1,...)
     qfn <- function(x,...) qt(x, df = P1-1,...)
-  } else stop("That method is not yet supported")
+  } else {
+    pfn <- function(x,...) pmccracken.2(x, ..., rtRatio = R/(R+P),
+                                        qtRatio = P2/(R+P1), window = window)
+    qfn <- function(x,...) qmccracken.2(x, ..., rtRatio = R/(R+P),
+                                        qtRatio = P2/(R+P1), window = window)
+  }
 
   if (alternative == "greater") {
-    pval <- function(tstat) pfn(tstat, lower.tail = FALSE)
-    cint <- function(mx, std) mx + std * c(- qfn(conf.level), Inf)
+    pval <- function(tstat,...) pfn(tstat, lower.tail = FALSE,...)
+    cint <- function(mx, std,...) mx + std * c(- qfn(conf.level,...), Inf)
   } else if (alternative == "less") {
-    pval <- function(tstat) pfn(tstat)
-    cint <- function(mx, std) mx + std * c(-Inf, qfn(conf.level))
-  } else {
+    pval <- function(tstat,...) pfn(tstat,...)
+    cint <- function(mx, std,...) mx + std * c(-Inf, qfn(conf.level,...))
+  } else if (alternative == "two.sided") {
     pval <- function(tstat) 2 * pfn(- abs(tstat))
-    cint <- function(mx, std) mx + std * c(-1, 1) * qfn(0.5 * (1 + conf.level))
-  }
-    
+    cint <- function(mx, std,...) mx + std * c(qfn(conf.level/2,...)
+                                               qfn(0.5 * (1 + conf.level),...))
+  } else stop("Invalid choice for alternative")
+
+  k.null <- ncol(model.matrix(null.model))
   ## actually calculate the oos t-statistics
-  tstats <- lapply(seq_along(loss.diff), function(x) {
-    mx <- mean(loss.diff[[x]])
-    std <- sd(loss.diff[[x]]) * sqrt(1/P1 + 1/P2)
+  tstats <- lapply(alt.model, function(alt) {
+    loss.diff <- (L(null.errors)
+                  - L(apply.oos(R, data, alt, window, ret = "error")))
+    
+    mx <- mean(loss.diff)
+    std <- sd(loss.diff) * sqrt(1/P1 + 1/P2)
+    kdiff <- ncol(model.matrix(alt)) - k.null
     
     if (!is.null(data2)) {
-      my <- mean(loss.diff2[[x]])
-      htest.finish(rval, c(mx, my), c("OOS Avg. 1", "OOS Avg. 2"), (mx-my) / std,
-                   "oos-t2", pval((mx-my)/std), cint(mx, std), conf.level)
+      loss.diff2 <- (L(null.errors2)
+                     - L(apply.oos(R2, dfull, alt, window, ret = "error")))
+      my <- mean(loss.diff2)
+      htest.finish(rval, c(mx, my), c("OOS Avg. 1", "OOS Avg. 2"),
+                   (mx-my) / std, "oos-t2", pval((mx-my)/std, k = kdiff),
+                   cint(mx, std, k = kdiff), conf.level)
     } else {
-      htest.finish(rval, mx, "OOS Avg. 1", mx/std, "oos-t2", pval(mx/std), cint(mx, std), conf.level)
+      htest.finish(rval, mx, "OOS Avg. 1", mx/std, "oos-t2",
+                   pval(mx/std, k = kdiff), cint(mx, std, k = kdiff),
+                   conf.level)
     }})
   if (!returnList) tstats <- tstats[[1]]
   tstats

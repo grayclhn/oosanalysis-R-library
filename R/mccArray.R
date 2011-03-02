@@ -18,8 +18,9 @@ mccArray2$fixed <- mccArray2$rolling <- mccArray2$recursive <-
   array(dim = c(length(rtRatio), length(rtRatio), length(quantiles), kmax))
 
 for (window in c("fixed", "recursive", "rolling")) {
-  mccArray1[[window]] <- make.mccArray1(window, nsims, ngrain)
-  mccArray2[[window]] <- make.mccArray2(window, nsims, ngrain)
+  ## These need to be set higher than 10.
+  mccArray1[[window]] <- make.mccArray1(window, 10, 10)
+  mccArray2[[window]] <- make.mccArray2(window, 10, 10)
 }
 
 save(mccArray1, mccArray2, file = "OOS/data/mccArray.Rda")

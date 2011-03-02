@@ -40,6 +40,7 @@ index.rt <- function(rt) {
 qmccracken.1 <- function(p, k, rtRatio, 
                          window = c("fixed", "recursive", "rolling")) {
   window <- match.arg(window)
+  data(mccArray1)
   ## we've tabluated values for p = 0, 0.01, ..., 1.00 and for
   ## rtRatio = 0.01,...,0.99
   p <- index.p(p)
@@ -53,7 +54,8 @@ qmccracken.1 <- function(p, k, rtRatio,
 
 qmccracken.2 <- function(p, k, rtRatio, qtRatio,
                          window = c("fixed", "recursive", "rolling")) {
-  if (qtRatio < 0 || rtRatio < 0) 
+  if (qtRatio < 0 || rtRatio < 0 || rtRatio > 1)
+    stop("rtRatio and qtRatio must be positive and rtRatio must be less than one.")
   window <- match.arg(window)
   qnRatio <- qtRatio / (1 + qtRatio)
   rnRatio <- (1 - qnRatio) * rtRatio
