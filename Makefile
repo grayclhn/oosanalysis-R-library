@@ -13,7 +13,7 @@ Install: $(zipfile)
 	R CMD INSTALL $(package)
 	touch $@
 
-OOS/data/mccArray.Rda: R/mccArray.R OOS/R/make.mccArray.R
+OOS/data/mccArray.Rda: R/mccArray.R OOS/R/make.mccArray.R OOS/R/rmcc.R
 	R CMD BATCH --vanilla --slave $< 
 
 # I like this next rule.  The 'check' file depends on every file that's

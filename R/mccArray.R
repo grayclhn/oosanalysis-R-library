@@ -3,6 +3,7 @@
 ## two-sample equivalent.
 
 source("OOS/R/make.mccArray.R")
+source("OOS/R/rmcc.R")
 set.seed(810329)
 rtRatio = seq(.01, .99, by = .01)
 quantiles = seq(0, 1, by = 0.01)
@@ -18,9 +19,8 @@ mccArray2$fixed <- mccArray2$rolling <- mccArray2$recursive <-
   array(dim = c(length(rtRatio), length(rtRatio), length(quantiles), kmax))
 
 for (window in c("fixed", "recursive", "rolling")) {
-  ## These need to be set higher than 10.
-  mccArray1[[window]] <- make.mccArray1(window, 10, 10)
-  mccArray2[[window]] <- make.mccArray2(window, 10, 10)
+  mccArray1[[window]] <- make.mccArray1(window, 10000, 10000)
+  mccArray2[[window]] <- make.mccArray2(window, 10000, 10000)
 }
 
 save(mccArray1, mccArray2, file = "OOS/data/mccArray.Rda")

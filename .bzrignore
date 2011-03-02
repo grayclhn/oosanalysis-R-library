@@ -1,4 +1,5 @@
 *~
+*.Rout
 *.Rcheck
 *.tar.gz
 *.o
