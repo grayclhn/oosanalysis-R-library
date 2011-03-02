@@ -1,0 +1,25 @@
+## Extra code to generate the mccArray objects that are used for
+## quantiles for McCracken's (2007) out-of-sample test and its
+## two-sample equivalent.
+
+source("OOS/R/make.mccArray.R")
+set.seed(810329)
+rtRatio = seq(.01, .99, by = .01)
+quantiles = seq(0, 1, by = 0.01)
+kmax <- 20
+
+mccArray1 <- list()
+mccArray2 <- list()
+
+mccArray1$fixed  <- mccArray1$rolling <- mccArray1$recursive <-
+  array(dim = c(length(rtRatio), length(quantiles), kmax))
+
+mccArray2$fixed <- mccArray2$rolling <- mccArray2$recursive <-
+  array(dim = c(length(rtRatio), length(rtRatio), length(quantiles), kmax))
+
+for (window in c("fixed", "recursive", "rolling")) {
+  mccArray1[[window]] <- make.mccArray1(window, nsims, ngrain)
+  mccArray2[[window]] <- make.mccArray2(window, nsims, ngrain)
+}
+
+save(mccArray1, mccArray2, file = "OOS/data/mccArray.Rda")
