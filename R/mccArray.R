@@ -2,6 +2,9 @@
 ## quantiles for McCracken's (2007) out-of-sample test and its
 ## two-sample equivalent.
 
+## 'datafile' is set at the command line.
+stopifnot(is.character(datafile))
+
 source("OOS/R/make.mccArray.R")
 source("OOS/R/rmcc.R")
 set.seed(810329)
@@ -19,8 +22,8 @@ mccArray2$fixed <- mccArray2$rolling <- mccArray2$recursive <-
   array(dim = c(length(rtRatio), length(rtRatio), length(quantiles), kmax))
 
 for (window in c("fixed", "recursive", "rolling")) {
-  mccArray1[[window]] <- make.mccArray1(window, 10000, 10000)
-  mccArray2[[window]] <- make.mccArray2(window, 10000, 10000)
+  mccArray1[[window]] <- make.mccArray1(window, 2000, 1000, showprogress = TRUE)
+  mccArray2[[window]] <- make.mccArray2(window, 2000, 1000, showprogress = TRUE)
 }
 
-save(mccArray1, mccArray2, file = "OOS/data/mccArray.Rda")
+save(mccArray1, mccArray2, file = datafile)

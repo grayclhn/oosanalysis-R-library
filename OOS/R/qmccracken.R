@@ -40,7 +40,6 @@ index.rt <- function(rt) {
 qmccracken.1 <- function(p, k, rtRatio, 
                          window = c("fixed", "recursive", "rolling")) {
   window <- match.arg(window)
-  data(mccArray1)
   ## we've tabluated values for p = 0, 0.01, ..., 1.00 and for
   ## rtRatio = 0.01,...,0.99
   p <- index.p(p)
@@ -57,36 +56,38 @@ qmccracken.2 <- function(p, k, rtRatio, qtRatio,
   if (qtRatio < 0 || rtRatio < 0 || rtRatio > 1)
     stop("rtRatio and qtRatio must be positive and rtRatio must be less than one.")
   window <- match.arg(window)
-  qnRatio <- qtRatio / (1 + qtRatio)
-  rnRatio <- (1 - qnRatio) * rtRatio
+  pnRatio <- (1 - rtRatio) / (1 + qtRatio)
+  rnRatio <- rtRatio / (1 + qtRatio)
   ## we've tabluated values for p = 0, 0.01, ..., 1.00 and for
   ## qnRatio and rnRatio = 0.01,...,0.99
   p <- index.p(p)
   rn <- index.rt(rnRatio)
-  qn <- index.rt(qnRatio)
+  pn <- index.rt(pnRatio)
 
-  coords <- expand.grid(p = p[-1], rn = rn[-1], qn = qn[-1])
-  values <- mapply(function(p, rn, qn) mccArray2[[window]][qn, rn, p, k],
-                   p = coords$p, rn = coords$rn, qn = coords$qn)
-  interpolate(c(p[1], rn[1], qn[1]), coords, values)
+  coords <- expand.grid(p = p[-1], rn = rn[-1], pn = pn[-1])
+  values <- mapply(function(p, rn, pn) mccArray2[[window]][rn, pn, p, k],
+                   p = coords$p, rn = coords$rn, pn = coords$pn)
+  interpolate(c(p[1], rn[1], pn[1]), coords, values)
 }
 
-searchAlg <- function(pstart, critFn, tol,...) {
+searchAlg <- function(target, pstart, critFn, tol, maxIterations = 100,...) {
   qvals <- c(critFn(pstart[1],...), critFn(pstart[2],...))
 
-  if (q < qvals[1]) {
+  if (target < qvals[1]) {
     return(0)
-  } else if (q > qvals[2]) {
+  } else if (target > qvals[2]) {
     return(1)
   }
-  
+
+  nIterations <- 0
   ## do a binary search
   repeat {
+    nIterations <- nIterations + 1
     p.new <- mean(pstart)
     qval.new <- critFn(p.new,...)
-    if (isTRUE(all.equal(cval.new, q))) {
+    if (isTRUE(all.equal(qval.new, target))) {
       return(p.new)
-    } else if (cval.new > q) {
+    } else if (qval.new > target) {
       pstart[2] <- p.new
       qvals[2] <- qval.new
     } else {
@@ -94,17 +95,26 @@ searchAlg <- function(pstart, critFn, tol,...) {
       qvals[1] <- qval.new
     }
     ## this is probably more accurate than we're really being, so I'm
-    ## not going to worry about better refinements.
-    if (abs(diff(pstart)) < 0.005) break
+    ## not going to worry about better refinements. (ultimately, we
+    ## have a critical values from a monte carlo and we're
+    ## interpolating them)
+    if (abs(diff(pstart)) < 0.005) {
+      ret <- mean(pstart)
+      attr(ret, "code") <- 0
+      return(ret)
+    } else if (nIterations > maxIterations) {
+      ret <- mean(pstart)
+      attr(ret, "code") <- 1
+      return(ret)
+    }
   }
-  mean(pstart)
 }
 
 pmccracken.1 <- function(q, k, rtRatio, 
                          window = c("fixed", "recursive", "rolling"),
                          lower.tail = TRUE) {
   window <- match.arg(window)
-  p <- searchAlg(c(0, 1), function(p)
+  p <- searchAlg(q, c(0, 1), function(p)
                  qmccracken.1(p, k, rtRatio, window), 0.005)
   ifelse(lower.tail, p, 1 - p)
 }
@@ -113,7 +123,7 @@ pmccracken.2 <- function(q, k, rtRatio, qtRatio,
                          window = c("fixed", "recursive", "rolling"),
                          lower.tail = TRUE) {
   window <- match.arg(window)
-  p <- searchAlg(c(0, 1), function(p)
+  p <- searchAlg(q, c(0, 1), function(p)
                  qmccracken.2(p, k, rtRatio, qtRatio, window), 0.005)
   ifelse(lower.tail, p, 1 - p)
 }

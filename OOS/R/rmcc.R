@@ -3,14 +3,11 @@ rmcc <- function(rtRatio, k, nsims = 600, ngrain = 600,
   window <- match.arg(window)
   ## startVals is the rtRatio, but rescaled so that it applies for
   ## ngrain -- we also ensure that startVals is positive.  
-  startVals <- sapply(floor(rtRatio * ngrain), function(x) max(x, 1))
-  rvPair <- switch(window,
-                   "fixed"     = rmcc.fixed(startVals, k, nsims, ngrain),
-                   "rolling"   = rmcc.rolling(startVals, k, nsims, ngrain),
-                   "recursive" = rmcc.recursive(startVals, k, nsims, ngrain),
-                   stop("Invalid window type"))
-  list(numerator = rvPair$gam1 - 0.5 * rvPair$gam2,
-       denominator = sqrt(rvPair$gam2))
+  startVals <- unique(pmax(1, floor(rtRatio * ngrain)))
+  switch(window,
+         "fixed"     = rmcc.fixed(startVals, k, nsims, ngrain),
+         "rolling"   = rmcc.rolling(startVals, k, nsims, ngrain),
+         "recursive" = rmcc.recursive(startVals, k, nsims, ngrain))
 }
 
 rmcc.recursive <- function(startVals, k, nsims, ngrain) {
@@ -61,13 +58,14 @@ rmcc.rolling <- function(startVals, k, nsims, ngrain) {
 
   gam1 <- gam2 <- matrix(NA, length(startVals), nsims)
   for (i in 1:length(startVals)) {
-    gam1[i,] <- (apply((w[startVals[i]:ngrain - 1,,,drop = FALSE] -
-                        w[1:(ngrain-startVals[i] + 1),,,drop = FALSE])
-                       * dw[startVals[i]:ngrain,,,drop = FALSE], 2, sum)
-                 * ngrain / startVals[i])
-    gam2[i,] <- (apply((w[startVals[i]:ngrain - 1,,,drop = FALSE] -
-                        w[1:(ngrain-startVals[i] + 1),,,drop = FALSE])^2, 2, sum)
-                 * ngrain / startVals[i]^2)
+    iLead <- (startVals[i]+1):(ngrain-1)
+    iLag <- 1:(ngrain-startVals[i]-1)
+    gam1[i,] <-
+      (apply((w[iLead,,,drop = FALSE] - w[iLag,,,drop = FALSE]) *
+             dw[iLead+1,,,drop = FALSE], 2, sum) * ngrain / startVals[i])
+    gam2[i,] <-
+      (apply((w[iLead,,,drop = FALSE] - w[iLag,,,drop = FALSE])^2, 2, sum)
+       * ngrain / startVals[i]^2)
   }
   list(gam1 = gam1, gam2 = gam2)
 }

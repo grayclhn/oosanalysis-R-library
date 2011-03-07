@@ -115,15 +115,17 @@ check(tstat$conf.int,  oos.tstat2$conf.int)
 check(tstat$estimate,  oos.tstat$estimate)
 check(tstat$estimate,  oos.tstat2$estimate)
 
-oos.t(null.model, list(a = alt.modelx, y = alt.modelz),
-      d, R, L, "rolling", "DMW", "greater")
+d <- data.frame(x = rnorm(200), y = rnorm(200), z = rnorm(200))
+oos.t(null.model, alt.modelz, d, 80, window = "rolling", method = "DMW")
+oos.t(null.model, alt.modelz, d, 80, window = "rolling", method = "Mcc:07")
 
 d2 <- data.frame(x = rnorm(60), y = rnorm(60))
-oos.t2(null.model, alt.modelx, d, data2 = d2, R = R, L = L,
-       window = "rolling", method = "DMW")
+oos.t2(null.model, alt.modelx, d, data2 = d2, R = 80, window = "rolling", method = "DMW")
+oos.t2(null.model, alt.modelx, d, data2 = d2, R = 80, window = "rolling", method = "Mcc:07")
+
 
 ## works with dynamic models too!
-library(dyn)
+require(dyn)
 dyn.model <- function(d) lm(y ~ lag(y, -2), data = d)
 oos.t2(null.model, dyn.model, d, data2 = d2, R = R, L = L,
        window = "rolling", method = "DMW")
