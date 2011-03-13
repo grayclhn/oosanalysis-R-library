@@ -43,7 +43,7 @@ apply.oos(4, d, ols, "recursive", "forecast")
 ## observation 11 (note that the forecast for observation 11 will be the
 ## 7th element that apply.oos returns in this example)
 newd <- d[11,]
-check <- function(a, b) stopifnot(all.equal(a, b))
+check <- function(a, b) stopifnot(all.equal(a, b, check.attributes = FALSE))
 
 check(predict(lm(y ~ x, data = d[7:10,]), newd),
       apply.oos(4, d, ols, "rolling", "forecast")[7])

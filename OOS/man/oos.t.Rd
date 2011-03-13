@@ -120,8 +120,10 @@ oos.t(null.model, alt.modelz, d, 80, window = "rolling", method = "DMW")
 oos.t(null.model, alt.modelz, d, 80, window = "rolling", method = "Mcc:07")
 
 d2 <- data.frame(x = rnorm(60), y = rnorm(60))
-oos.t2(null.model, alt.modelx, d, data2 = d2, R = 80, window = "rolling", method = "DMW")
-oos.t2(null.model, alt.modelx, d, data2 = d2, R = 80, window = "rolling", method = "Mcc:07")
+oos.t2(null.model, alt.modelx, d, data2 = d2, R = 80,
+       window = "rolling", method = "DMW")
+oos.t2(null.model, alt.modelx, d, data2 = d2, R = 80,
+       window = "rolling", method = "Mcc:07")
 
 
 ## works with dynamic models too!

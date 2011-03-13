@@ -111,7 +111,7 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
                    R, P2 = nobs(data2), L = function(x) x^2,
                    window = c("rolling", "recursive", "fixed"),
                    method = c("DMW", "Mcc:07"), alternative = "greater",
-                   conf.level = 0.95) {
+                   conf.level = 0.95, return.forecasts = FALSE, return.errors = FALSE, return.loss = FALSE) {
   window <- match.arg(window)
   method <- match.arg(method)
   if (alternative != "greater")
@@ -137,19 +137,59 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
       warning("McCracken's (2007) test requires that the loss function be MSE, so your argument will be overridden")
     L <- function(x) x^2
   }
+
+  if (alternative == "greater") {
+    pval <- function(tstat,...) pfn(tstat, lower.tail = FALSE,...)
+    cint <- function(mx, std,...) mx + std * c(- qfn(conf.level,...), Inf)
+  } else if (alternative == "less") {
+    pval <- function(tstat,...) pfn(tstat,...)
+    cint <- function(mx, std,...) mx + std * c(-Inf, qfn(conf.level,...))
+  } else if (alternative == "two.sided") {
+    pval <- function(tstat,...) 2 * pfn(- abs(tstat),...)
+    cint <- function(mx, std,...) mx + std * c(qfn(conf.level/2,...),
+                                               qfn(0.5 * (1 + conf.level),...))
+  } else stop("Invalid choice for alternative")
   
   returnList <- is.list(alt.model)
   if (!returnList) alt.model <- list(a = alt.model)
   if (R >= nobs(data)) stop("'R' is larger than the dataset")
   data.name <- deparse(substitute(data))
   data <- as.ts(data)
+
+  modnames <- if (is.null(names(alt.model))) {
+    c("null", paste("alt", seq_along(alt.model), sep = "."))
+  } else {
+    c("null", names(alt.model))
+  }
   
-  null.errors <- apply.oos(R, data, null.model, window, ret = "error")
+  ## get the forecast errors over the first oos period
+  null.errors <- apply.oos(R, data, null.model, window, "error")
+  alt.errors <- lapply(alt.model, function(alt) apply.oos(R, data, alt, window, "error"))
+  ## put together period-specific information that we might return
+  if (return.errors) {
+    rErrors <- vector("list", length(modnames))
+    names(rErrors) <- modnames
+    rErrors[[1]] <- null.errors
+    rErrors[-1] <- alt.errors
+  }
+  if (return.loss) {
+    rLoss <- vector("list", length(modnames))
+    names(rLoss) <- modnames
+    rLoss[[1]] <- L(null.errors)
+    rLoss[-1] <- lapply(alt.errors, function(e) L(e))
+  }
+  if (return.forecasts) {
+    rForecasts <- vector("list", length(modnames))
+    names(rForecasts) <- modnames
+    rForecasts[[1]] <- apply.oos(R, data, null.model, window, "forecast")
+    rForecasts[-1] <- lapply(alt.model, function(alt) apply.oos(R, data, alt, window, "forecast"))
+  }
   P1 <- length(null.errors)
   
   ## The '&&' is important (instead of '&') so that we don't evaluate
   ## nobs(data2) if data2 is NULL.
   if (!is.null(data2) && P2 <= nobs(data2)) {
+    twosamples <- TRUE
     data.name <- c(data.name, deparse(substitute(data2)))
     data2 <- as.ts(data2)
     ## if data2 is supplied, we calculate the out-of-sample loss over
@@ -170,39 +210,41 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
       R2 <- nobs(data)
     }
     methodText <- paste("Two-sample OOS t-test, ", window, " window (", method, ")", sep = "")
-    null.errors2 <- apply.oos(R2, dfull, null.model, window, ret = "error")
+    null.errors2 <- apply.oos(R2, dfull, null.model, window, "error")
+    alt.errors2 <- lapply(alt.model, function(alt) apply.oos(R2, dfull, alt, window, "error"))
+
+    ## add any period-specific information that we want to return
+    addTs <- function(list1, null2, alt2) {
+      list1[[1]] <- cts(list1[[1]], null2)
+      list1[-1] <- lapply(seq_along(alt2), function(j) cts(list1[[j+1]], alt2[[j]]))
+      list1
+    }
+    if (return.errors) rErrors <- addTs(rErrors, null.errors2, alt.errors2)
+    if (return.loss) rLoss <- addTs(rLoss, L(null.errors2), lapply(alt.errors2, L))
+    if (return.forecasts) rForecasts <-
+      addTs(rForecasts, 
+            apply.oos(R2, dfull, null.model, window, "forecast"),
+            lapply(alt.model, function(alt) apply.oos(R2, dfull, alt, window, "forecast")))
+
   } else {
+    twosamples <- FALSE
     methodText <- paste("One-sample OOS t-test, ", window, " window (", method, ")", sep = "")
   }
 
   rval <- htest.start("L.alt-bar", "L.null-bar", c(R, P1, P2), c("R", "P1", "P2"),
                       methodText, data.name, alternative)
 
-  if (alternative == "greater") {
-    pval <- function(tstat,...) pfn(tstat, lower.tail = FALSE,...)
-    cint <- function(mx, std,...) mx + std * c(- qfn(conf.level,...), Inf)
-  } else if (alternative == "less") {
-    pval <- function(tstat,...) pfn(tstat,...)
-    cint <- function(mx, std,...) mx + std * c(-Inf, qfn(conf.level,...))
-  } else if (alternative == "two.sided") {
-    pval <- function(tstat,...) 2 * pfn(- abs(tstat),...)
-    cint <- function(mx, std,...) mx + std * c(qfn(conf.level/2,...),
-                                               qfn(0.5 * (1 + conf.level),...))
-  } else stop("Invalid choice for alternative")
-
   k.null <- ncol(model.matrix(null.model(data)))
   ## actually calculate the oos t-statistics
-  tstats <- lapply(alt.model, function(alt) {
-    loss.diff <- (L(null.errors)
-                  - L(apply.oos(R, data, alt, window, ret = "error")))
+  tstats <- lapply(seq_along(alt.model), function(j) {
+    loss.diff <- L(null.errors) - L(alt.errors[[j]])
     
     mx <- mean(loss.diff)
     std <- sd(loss.diff) * sqrt(1/P1 + 1/P2)
-    kdiff <- ncol(model.matrix(alt(data))) - k.null
+    kdiff <- ncol(model.matrix(alt.model[[j]](data))) - k.null
     
-    if (!is.null(data2)) {
-      loss.diff2 <- (L(null.errors2)
-                     - L(apply.oos(R2, dfull, alt, window, ret = "error")))
+    if (twosamples) {
+      loss.diff2 <- L(null.errors2) - L(alt.errors2[[j]])
       my <- mean(loss.diff2)
       htest.finish(rval, c(mx, my), c("OOS Avg. 1", "OOS Avg. 2"),
                    (mx-my) / std, "oos-t2", pval((mx-my)/std, k = kdiff),
@@ -213,5 +255,8 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
                    conf.level)
     }})
   if (!returnList) tstats <- tstats[[1]]
+  if (return.errors) attr(tstats, "errors") <- rErrors
+  if (return.loss) attr(tstats, "loss") <- rLoss
+  if (return.forecasts) attr(tstats, "forecasts") <- rForecasts
   tstats
 }

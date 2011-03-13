@@ -29,5 +29,6 @@ forecast.error(mod, newd)
 # Calculate forecast errors by hand:
 errs <- newd$y - predict(mod, newd)
 
-stopifnot(all.equal(errs, forecast.error(mod, newd)))
+stopifnot(all.equal(errs, forecast.error(mod, newd),
+                    check.attributes = FALSE))
 }

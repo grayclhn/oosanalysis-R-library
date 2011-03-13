@@ -11,5 +11,5 @@ forecast.error <- function(object, newdata,...) {
                 frequency = frequency(newdata))
   }
   Y.hat <- predict(object, newdata,...)
-  Y.new - Y.hat
+  unname(Y.new - Y.hat)
 }
