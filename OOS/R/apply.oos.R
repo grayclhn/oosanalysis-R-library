@@ -23,7 +23,8 @@ apply.oos <- function(R, d, model,
   ##
   ## As you can imagine, this code is *extremely* slow.
   lastPred <- function(startEst, endEst, s,
-                       m = model(window(d, start = p[startEst], end = p[endEst]),...)) {
+                       m = model(window(d, start = p[startEst], end = p[endEst]),
+                         ...),...) {
     predictions <- predfn(m, newdata = window(d, start = p[startEst], end = p[s]))
     if (is.ts(predictions)) {
       window(predictions, start = p[s], end = p[s])

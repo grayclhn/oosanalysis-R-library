@@ -111,7 +111,8 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
                    R, P2 = nobs(data2), L = function(x) x^2,
                    window = c("rolling", "recursive", "fixed"),
                    method = c("DMW", "Mcc:07"), alternative = "greater",
-                   conf.level = 0.95, return.forecasts = FALSE, return.errors = FALSE, return.loss = FALSE) {
+                   conf.level = 0.95, return.forecasts = FALSE,
+                   return.errors = FALSE, return.loss = FALSE) {
   window <- match.arg(window)
   method <- match.arg(method)
   if (alternative != "greater")
@@ -164,7 +165,8 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
   
   ## get the forecast errors over the first oos period
   null.errors <- apply.oos(R, data, null.model, window, "error")
-  alt.errors <- lapply(alt.model, function(alt) apply.oos(R, data, alt, window, "error"))
+  alt.errors <- lapply(alt.model, function(alt)
+                       apply.oos(R, data, alt, window, "error"))
   ## put together period-specific information that we might return
   if (return.errors) {
     rErrors <- vector("list", length(modnames))
