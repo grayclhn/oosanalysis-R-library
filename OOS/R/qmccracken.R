@@ -15,54 +15,50 @@ interpolate <- function(at, coords, values) {
   drop(values)
 }
 
-index.p <- function(p) {  
-  pI <- 100 * p + 1
-  pvec <- c(ceiling(pI - 1), ceiling(pI))
-  if (any(pvec < 1)) {
-    pvec <- c(1,2)
-  } else if (any(pvec > 101)) {
-    pvec <- c(100, 101)
+mccIndex <- function(x, maxIndex, offset = 0) {
+  xI <- 100 * x + offset
+  maxIndex <- maxIndex + offset
+  ## using ceiling(xI-1) instead of floor(xI) is intentional; if x is
+  ## an integer, floor(xI) returns the same thing as ceiling(xI), but
+  ## ceiling(xI-1) returns xI-1.
+  xvec <- c(ceiling(xI - 1), ceiling(xI))
+  if (any(xvec < 1)) {
+    xvec <- c(1,2)
+    xI <- 1
+  } else if (any(xvec > maxIndex)) {
+    xvec <- c(maxIndex- 1, maxIndex)
+    xI <- maxIndex 
   }
-  c(pI, pvec)
+  c(xI, xvec)
 }
 
-index.rt <- function(rt) {  
-  rtI <- 100 * rt
-  rtVec <- c(ceiling(rtI - 1), ceiling(rtI))
-  if (any(rtVec < 1)) {
-    rtVec <- c(1,2)
-  } else if (any(rtVec > 99)) {
-    rtVec <- c(98, 99)
-  }
-  c(rtI, rtVec)
-}
-
-qmccracken.1 <- function(p, k, rtRatio, 
+qmccracken.1 <- function(p, k, R, P,
                          window = c("fixed", "recursive", "rolling")) {
   window <- match.arg(window)
-  ## we've tabluated values for p = 0, 0.01, ..., 1.00 and for
-  ## rtRatio = 0.01,...,0.99
-  p <- index.p(p)
-  rt <- index.rt(rtRatio)
+  ## we've tabluated values for p = 0, 0.01, ..., 1.00 and for R/(R+P)
+  ## = 0.01,...,0.99 in the array mccArray1, accessed in the order
+  ## 
+  ## (100 * R/R+P, 100 * p + 1, k)
+  p  <- mccIndex(p, 100, 1)
+  rt <- mccIndex(R / (R+P), 99)
 
   coords <- expand.grid(p = p[-1], rt = rt[-1])
   values <- mapply(function(p, rt) mccArray1[[window]][rt, p, k],
                    p = coords$p, rt = coords$rt)
-  interpolate(c(p[1]+1, rt[1]), coords, values)
+  interpolate(c(p[1], rt[1]), coords, values)
 }
 
-qmccracken.2 <- function(p, k, rtRatio, qtRatio,
+qmccracken.2 <- function(p, k, R, P1, P2,
                          window = c("fixed", "recursive", "rolling")) {
-  if (qtRatio < 0 || rtRatio < 0 || rtRatio > 1)
-    stop("rtRatio and qtRatio must be positive and rtRatio must be less than one.")
   window <- match.arg(window)
-  pnRatio <- (1 - rtRatio) / (1 + qtRatio)
-  rnRatio <- rtRatio / (1 + qtRatio)
   ## we've tabluated values for p = 0, 0.01, ..., 1.00 and for
-  ## qnRatio and rnRatio = 0.01,...,0.99
-  p <- index.p(p)
-  rn <- index.rt(rnRatio)
-  pn <- index.rt(pnRatio)
+  ## R/(R+P1+P2) and P1/(R+P1+P2) = 0.01,...,0.99 in the array
+  ## mccArray2, accessed in the order
+  ##
+  ## (100 * R/(R+P1+P2), 100 * P1/(R+P1+P2), 100 * p + 1, k)
+  p <- mccIndex(p, 100, 1)
+  rn <- mccIndex(R / (R+P1+P2), 99)
+  pn <- mccIndex(P1 / (R+P1+P2), 99)
 
   coords <- expand.grid(p = p[-1], rn = rn[-1], pn = pn[-1])
   values <- mapply(function(p, rn, pn) mccArray2[[window]][rn, pn, p, k],
@@ -70,7 +66,8 @@ qmccracken.2 <- function(p, k, rtRatio, qtRatio,
   interpolate(c(p[1], rn[1], pn[1]), coords, values)
 }
 
-searchAlg <- function(target, pstart, critFn, tol, maxIterations = 100,...) {
+searchAlg <- function(target, pstart, critFn, maxIterations = 200,
+                      tol = .Machine$double.eps^0.25,...) {
   qvals <- c(critFn(pstart[1],...), critFn(pstart[2],...))
 
   if (target < qvals[1]) {
@@ -98,7 +95,7 @@ searchAlg <- function(target, pstart, critFn, tol, maxIterations = 100,...) {
     ## not going to worry about better refinements. (ultimately, we
     ## have a critical values from a monte carlo and we're
     ## interpolating them)
-    if (abs(diff(pstart)) < 0.005) {
+    if (abs(diff(pstart)) < tol) {
       ret <- mean(pstart)
       attr(ret, "code") <- 0
       return(ret)
@@ -110,20 +107,20 @@ searchAlg <- function(target, pstart, critFn, tol, maxIterations = 100,...) {
   }
 }
 
-pmccracken.1 <- function(q, k, rtRatio, 
+pmccracken.1 <- function(q, k, R, P,
                          window = c("fixed", "recursive", "rolling"),
-                         lower.tail = TRUE) {
+                         lower.tail = TRUE,...) {
   window <- match.arg(window)
-  p <- searchAlg(q, c(0, 1), function(p)
-                 qmccracken.1(p, k, rtRatio, window), 0.005)
+  p <- searchAlg(q, c(0, 1),
+                 function(p) qmccracken.1(p, k, R, P, window),...)
   ifelse(lower.tail, p, 1 - p)
 }
 
-pmccracken.2 <- function(q, k, rtRatio, qtRatio,
+pmccracken.2 <- function(q, k, R, P1, P2,
                          window = c("fixed", "recursive", "rolling"),
-                         lower.tail = TRUE) {
+                         lower.tail = TRUE,...) {
   window <- match.arg(window)
   p <- searchAlg(q, c(0, 1), function(p)
-                 qmccracken.2(p, k, rtRatio, qtRatio, window), 0.005)
+                 qmccracken.2(p, k, R, P1, P2, window),...)
   ifelse(lower.tail, p, 1 - p)
 }

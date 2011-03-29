@@ -1,107 +1,212 @@
-htest.start <- function(null.value, null.text, parameter, parameter.text,
-                        method, data.name, alternative) {
-  rval <- list(null.value = null.value, parameter = parameter,
-               method = method, data.name = data.name, alternative = alternative)
-  names(rval$null.value) <- null.text
-  names(rval$parameter) <- parameter.text
-  
-  class(rval) <- "htest"
-  rval
+newhtest <- function(...) {
+  x <- list()
+  buildhtest(x) <- list(...)
+  x
 }
 
-htest.finish <- function(rval, estimate, estimate.text, statistic,
-                         statistic.text, p.value, conf.int, conf.int.text) {
-  rval$estimate <- estimate
-  names(rval$estimate) <- estimate.text
-  rval$statistic <- statistic
-  names(rval$statistic) <- statistic.text
-  rval$p.value <- p.value
-  rval$conf.int <- conf.int
-  attr(rval$conf.int, "conf.level") <- conf.int.text
-  rval
+## a more general version of 'names', just reflecting the fact that
+## confidence intervals aren't stored as "names" for some reason.
+hNames <- function(x, elem = "") {
+  if (elem == "conf.int") {
+    attr(x, "conf.level")
+  } else {
+    names(x)
+  }
 }
 
-## 'alternative' is the loss of the benchmark model relative to the
-## alternative.  So the usual alternative is going to be that the loss
-## of the null model is "greater" than that of the alternative.
-
-oos.t <- function(null.model, alt.model, data, R,
-                  L = function(x) x^2,
-                  window = c("rolling", "recursive", "fixed"),
-                  method = c("DMW", "Mcc:07"), alternative = "greater",
-                  conf.level = 0.95) {
-  window <- match.arg(window)
-  method <- match.arg(method)
-  if (alternative != "greater")
-    warning("The alternative is almost always 'greater.'  Are you sure?")
-
-  if (method == "DMW") {
-    ## use the t approximation for the DMW test so that the numbers
-    ## are consistent with t.test.
-    pfn <- function(x, k,...) pt(x, df = P-1,...)
-    qfn <- function(x, k,...) qt(x, df = P-1,...)
+'hNames<-' <- function(x, elem = "", value) {
+  if (elem == "conf.int") {
+    attr(x, "conf.level") <- value
   } else {
-    pfn <- function(x, k,...) pmccracken.1(x, k, R/(R+P), window,...)
-    qfn <- function(x, k,...) qmccracken.1(x, k, R/(R+P), window,...)
-    ## override the supplied loss function
-    if (!missing(L))
-      warning("McCracken's (2007) test requires that the loss function be MSE, so your argument will be overridden")
-    L <- function(x) x^2
+    names(x) <- value
   }
+  x
+}
 
-  ## If alt.model is a list, we want to return a list; otherwise we're
-  ## going to return a single statistic.  returnList is the boolean
-  ## that indicates whether or not we should return a list.
-  returnList <- is.list(alt.model)
-  if (!returnList) alt.model <- list(a = alt.model)
-  if (R >= nobs(data)) stop("'R' is larger than the dataset")
-  data.name <- deparse(substitute(data))
-  data <- as.ts(data)
-
-  ## forecast errors for the benchmark model
-  null.errors <- apply.oos(R, data, null.model, window, ret = "error")
-  P <- length(null.errors)
-
-  ## start building the 'htest' object we'll return
-  rval <- htest.start("E(L.alt)", "E(L.null)", c(R, P), c("R", "P"),
-                      paste("One-sample OOS t-test, ", window,
-                            " window (", method, ")", sep = ""),
-                      data.name, alternative)
-
-  ## It's convenient to define different functions to calculate the
-  ## p.value and the confidence intervals outside the coming 'lapply',
-  ## so we only need to do it once.
-  if (alternative == "greater") {
-    pval <- function(tstat,...) pfn(tstat, lower.tail = FALSE,...)
-    cint <- function(mx, std,...) mx + std * c(- qfn(conf.level,...), Inf)
-  } else if (alternative == "two.sided") {
-    pval <- function(tstat,...) 2 * pfn(- abs(tstat),...)
-    cint <- function(mx, std,...) mx + std * c(qfn(conf.level/2,...),
-                                               qfn(0.5 * (1 + conf.level),...))
-  } else if (alternative == "less") {
-    pval <- function(tstat,...) pfn(tstat,...)
-    cint <- function(mx, std,...)  mx + std * c(-Inf, qfn(conf.level,...))
-  } else {
-    stop("Invalid choice for 'alternative'.")
-  }
+'buildhtest<-' <- function(x, value) {
+  ## an htest is a list (with class htest) and the following elements:
+  ## 'null.value' (with name 'null.text')
+  ## 'parameter'  (with name 'parameter.text')
+  ## 'method'
+  ## 'data.name'
+  ## 'alternative'
+  ## 'estimate'   (with name 'estimate.text')
+  ## 'statistic'  (with name 'statistic.text')
+  ## 'p.value'
+  ## 'conf.int'   (with attribute 'conf.level')
     
-  ## actually calculate the oos t-statistic for each sequence of loss
-  ## differences.
-  k.null <- ncol(model.matrix(null.model(data)))
-  tstats <- lapply(alt.model, function(alt) {
-    loss.diff <- (L(null.errors) -
-                  L(apply.oos(R, data, alt, window, ret = "error")))
-    kdiff <- ncol(model.matrix(alt(data))) - k.null
-    mx <- mean(loss.diff)
-    std <- sd(loss.diff) / sqrt(P)
-
-    htest.finish(rval, mx, "OOS Avg. 1", mx/std, "oos-t",
-                 pval(mx/std, k = kdiff), cint(mx, std, k = kdiff),
-                 conf.level)
-  })
+  'positionText<-' <- function(x, value) {
+    elem <- value[1]
+    elem.text <- value[2]
+    xnames <- names(x)
+    ielem <- which(xnames == elem)
+    nelem <- sum(ielem)
+    if (nelem >= 2) {
+      ## we're replacing the 'elem' entry; we just need to make sure
+      ## that we keep the names from the existing entry
+      if (is.null(hNames(x[[max(ielem)]], elem))) {
+        hNames(x[[tail(ielem, 1)]], elem) <- hNames(x[[min(ielem)]], elem)
+      }
+      x[head(ielem, -1)] <- NULL
+    }
+    if (elem.text %in% xnames) {
+      ## if 'elem' is missing, add it with value NA.
+      if (nelem == 0) {
+        x <- c(x, list(NA))
+        names(x) <- c(xnames, elem)
+      }
+      hNames(x[[elem]], elem) <- x[[elem.text]]
+      x[[elem.text]] <- NULL
+    }
+    x
+  }
   
-  if (!returnList) tstats <- tstats[[1]]
-  tstats
+  x <- c(as.list(x), as.list(value))
+  positionText(x) <- c("parameter", "parameter.text")
+  positionText(x) <- c("null.value", "null.text")
+  positionText(x) <- c("estimate", "estimate.text")
+  positionText(x) <- c("statistic", "statistic.text")
+  positionText(x) <- c("conf.int", "conf.level")
+  class(x) <- "htest"
+  x
+}
+
+lossDiff <- function(null.model, alt.model, data, R, window,
+                     L = function(x) x^2, return.forecasts = FALSE,
+                     return.errors = FALSE) {
+
+  if (is.null(names(alt.model)))
+    names(alt.model) <- paste("alt", seq_along(alt.model), sep = ".")
+  
+  errors <- lapply(alt.model, function(m)
+                   apply.oos(R, data, m, window, "error"))
+  loss <- lapply(errors, L)
+
+  ## if null.model is given, we want to return the difference in the
+  ## loss of the two models, and (potentially) the forecasts
+  ## associated with each model.
+  if (!is.null(null.model)) {
+    errors <- c(list("null" = apply.oos(R, data, null.model, window, "error")),
+                errors)
+    null.model <- list("null" = null.model)
+    null.loss <- L(errors[[1]])
+    loss <- lapply(loss, function(l) null.loss - l)
+  }
+
+  if (return.errors)
+    attr(loss, "error") <- errors
+  if (return.forecasts)
+    attr(loss, "forecast") <-
+      lapply(c(null.model, alt.model), function(m)
+             apply.oos(R, data, m, window, "forecast"))
+  loss
+}
+
+dFull <- function(data1, data2) {
+  if (is.ts(data1)) {
+    freq <- frequency(data1)
+    s1 <- time(data1)[1]
+    f1 <- tail(time(data1), 1)
+    if (is.ts(data2)) {
+      s2 <- time(data2)[1]
+      f2 <- tail(time(data2), 1)
+    } else {
+      s2 <- tail(time(lag(data1, -1)), 1)
+      f2 <- tail(time(lag(data1, -nobs(data2))), 1)
+    }
+  } else if (is.ts(data2)) {
+    freq <- frequency(data2)
+    s2 <- time(data2)[1]
+    f2 <- tail(time(data2), 1)
+    s1 <- time(lag(data2, nobs(data1)))[1]
+    f1 <- time(lag(data2, 1))[1]
+  } else {
+    data1[,setdiff(names(data2), names(data1))] <- NA
+    data2[,setdiff(names(data1), names(data2))] <- NA
+    return(rbind(data1, data2))
+  }
+  ## this is a pretty crappy way to assemble the time series matrix;
+  cols <- union(colnames(data1), colnames(data2))
+  m <- ts(matrix(NA, nobs(data1) + nobs(data2), length(cols)),
+          start = s1, end = f2, frequency = freq)
+  colnames(m) <- cols
+  for (cd in colnames(data1)) 
+    window(m[, cd], start = s1, end = f1) <- data1[, cd]
+  for (cd in colnames(data2))
+    window(m[, cd], start = s2, end = f2) <- data2[, cd]
+  m
+}
+
+oos.t <- function(null.model, alt.model, data, R, L = function(x) x^2,
+                  window = c("rolling", "recursive", "fixed"),
+                  method = c("DMW", "ClW:07", "Mcc:07"), alternative = "greater",
+                  conf.level = 0.95, return.forecasts = FALSE,
+                  return.errors = FALSE) {
+  method <- match.arg(method)
+  window <- match.arg(window)
+  if (method %in% c("ClW:07", "Mcc:07")) {
+    if (alternative != "greater") {
+      warning("Setting alternative to 'greater'")
+      alternative <- "greater"
+    }
+    if (!identical(L, function(x) x^2)) {
+      warning("Setting loss to MSE")
+      L <- function(x) x^2
+    }
+  }
+  returnList <- is.list(alt.model)
+  if (!returnList) alt.model <- list(alt = alt.model)
+  if (R >= nobs(data)) stop("'R' is larger than the dataset")
+
+  if (method == "ClW:07") {
+    forecasts <- lapply(c(list(null = null.model), alt.model), function(m)
+                        apply.oos(R, data, m, window, "forecast"))
+    errors <-  lapply(c(list(null = null.model), alt.model), function(m)
+                        apply.oos(R, data, m, window, "error"))
+    P <- length(ldiff1[[1]])
+
+    oosObs <-
+      lapply(seq_along(alt.model), function(i)
+             errors[[1]]^2 - errors[[i+1]]^2
+             + (forecasts[[1]] - forecasts[[i+1]])^2)
+    ## do the one-sample test
+    tstats <- lapply(oosObs, function(f) {
+      favg <- mean(f)
+      fstd <- sd(f) / sqrt(P)
+      tstat <- favg / fstd
+      newhtest(estimate = favg, estimate.text = "OOS Avg 1",
+               statistic = tstat, parameter = c(R, P),
+               p.value = pt(tstat, df = P-1, lower.tail = FALSE),
+               conf.int = favg + fstd * c(-qfn(conf.level, df = P-1), Inf),
+               method.text = sprintf("One-sample OOS t-test, %s window (ClW:07)",
+                 window))
+    })
+  } else {
+    ## Use oos.t2 to calculate the statistic for the DMW and Mcc:07
+    ## methods.
+    tstats <- oos.t2(null.model, alt.model, data, R = R, P2 = Inf,
+                     L = L, window = window, method = method,
+                     alternative = alternative, conf.level = conf.level,
+                     return.forecasts = return.forecasts,
+                     return.errors = return.errors)
+    ## replace the (R, P1, P2) notation with (R, P)
+    lapply(tstats, function(tst) {
+      buildhtest(tst) <-
+        list(parameter = c(tst$parameter["R"], tst$parameter["P1"]))
+      tst
+    })
+  }
+  ## add the remaining information needed for the 'htest' object.
+  tstats <- lapply(tstats, function(tst) {
+    buildhtest(tst) <-
+      list(data.name = deparse(substitute(data)),
+           null.value = "E(L.alt)", null.text = "E(L.alt)",
+           alternative = alternative, statistic.text = "oos-t",
+           conf.level = conf.level, parameter.text = c("R", "P"),
+           estimate.text = "OOS Avg")
+    tst
+  })
+  if (returnList) tstats else tstats[[1]]
 }
 
 ## 'alternative' is the loss of the benchmark model relative to the
@@ -112,153 +217,164 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
                    window = c("rolling", "recursive", "fixed"),
                    method = c("DMW", "Mcc:07"), alternative = "greater",
                    conf.level = 0.95, return.forecasts = FALSE,
-                   return.errors = FALSE, return.loss = FALSE) {
+                   return.errors = FALSE) {
+
   window <- match.arg(window)
+  returnList <- is.list(alt.model)
+  if (!returnList) alt.model <- list(alt = alt.model)
+  if (R >= nobs(data)) stop("'R' is larger than the dataset")
+
   method <- match.arg(method)
-  if (alternative != "greater")
-    warning("The alternative is almost always 'greater.'  Are you sure?")
+  if (is.null(null.model)) {
+    k.null <- 0
+    if (method != "DMW") {
+      method <- "DMW"
+      warning("We're setting method to 'DMW'. Without a null model, 'Mcc:07' doesn't make sense.")
+    }
+  } else {
+    k.null <- ncol(model.matrix(null.model(data)))
+  }
+  
+  ## start accumulating information for the 'htest' object
+  tstats <-
+    newhtest(data.name = deparse(substitute(data)),
+             alternative = alternative, null.value = "Avg(L.alt)",
+             null.text = "Avg(L.null)", statistic.text = "oos-t2",
+             conf.level = conf.level)
 
   if (method == "DMW") {
     ## I'm going to use the t-distribution for intervals, etc, for
-    ## consistency with oos.t (I want them to give the same results
-    ## when P2 = Inf).  Obviously, this statistic is coming from
-    ## asymptotic normality and the finite sample distribution is not
-    ## a t distribution.  But this will be a little more conservative
-    ## than the normal distribution, and if it affects your results
-    ## then they're pretty sensitive anyway and you should think some
-    ## more about whether the asymptotics are going to give reliable
-    ## approximations.
-    pfn <- function(x, k,...) pt(x, df = P1-1,...)
-    qfn <- function(x, k,...) qt(x, df = P1-1,...)
+    ## consistency with the one sample t-test (I want them to give the
+    ## same results when P2 = Inf).  Obviously, this statistic is
+    ## coming from asymptotic normality and the finite sample
+    ## distribution is not a t distribution.  But this will be a
+    ## little more conservative than the normal distribution, and if
+    ## it affects your results then they're pretty sensitive anyway
+    ## and you should think some more about whether the asymptotics
+    ## are going to give reliable approximations.
+    pfn <- function(x, k, P1, P2, R,...) pt(x, df = P1-1,...)
+    qfn <- function(x, k, P1, P2, R,...) qt(x, df = P1-1,...)
   } else {
-    pfn <- function(x, k,...) pmccracken.2(x, k, R/(R+P1), P2/(R+P1), window,...)
-    qfn <- function(x, k,...) qmccracken.2(x, k, R/(R+P1), P2/(R+P1), window,...)
+    pfn <- function(x, k, P1, P2, R,...)
+      pmccracken.2(x, k, R, P1, P2, window,...)
+    qfn <- function(x, k, P1, P2, R,...)
+      qmccracken.2(x, k, R, P1, P2, window,...)
     ## override the supplied loss function
     if (!missing(L))
       warning("McCracken's (2007) test requires that the loss function be MSE, so your argument will be overridden")
     L <- function(x) x^2
   }
-
+  
   if (alternative == "greater") {
-    pval <- function(tstat,...) pfn(tstat, lower.tail = FALSE,...)
-    cint <- function(mx, std,...) mx + std * c(- qfn(conf.level,...), Inf)
-  } else if (alternative == "less") {
-    pval <- function(tstat,...) pfn(tstat,...)
-    cint <- function(mx, std,...) mx + std * c(-Inf, qfn(conf.level,...))
-  } else if (alternative == "two.sided") {
-    pval <- function(tstat,...) 2 * pfn(- abs(tstat),...)
-    cint <- function(mx, std,...) mx + std * c(qfn(conf.level/2,...),
-                                               qfn(0.5 * (1 + conf.level),...))
-  } else stop("Invalid choice for alternative")
-  
-  returnList <- is.list(alt.model)
-  if (!returnList) alt.model <- list(a = alt.model)
-  if (R >= nobs(data)) stop("'R' is larger than the dataset")
-  data.name <- deparse(substitute(data))
-  data <- as.ts(data)
-
-  modnames <- if (is.null(names(alt.model))) {
-    c("null", paste("alt", seq_along(alt.model), sep = "."))
+    pval <- function(tstat, k, P1, P2, R)
+      pfn(tstat, k, P1, P2, R, lower.tail = FALSE)
+    cint <- function(mx, std, k, P1, P2, R)
+      mx + std * c(- qfn(conf.level, k, P1, P2, R), Inf)
   } else {
-    c("null", names(alt.model))
+    warning("The alternative is almost always 'greater'...")
+    if (alternative == "less") {
+      pval <- function(tstat, k, P1, P2, R)
+        pfn(tstat, k, P1, P2, R)
+      cint <- function(mx, std, k, P1, P2, R)
+        mx + std * c(-Inf, qfn(conf.level, k, P1, P2, R))
+    } else { 
+      pval <- function(tstat, k, P1, P2, R)
+        pfn(-tstat, k, P1, P2, R) + pfn(tstat, k, P1, P2, R)
+      cint <- function(mx, std, k, P1, P2, R)
+        mx + std * c(qfn(conf.level/2, k, P1, P2, R),
+                     qfn(0.5 * (1 + conf.level), k, P1, P2, R))
+    }
   }
-  
-  ## get the forecast errors over the first oos period
-  null.errors <- apply.oos(R, data, null.model, window, "error")
-  alt.errors <- lapply(alt.model, function(alt)
-                       apply.oos(R, data, alt, window, "error"))
-  ## put together period-specific information that we might return
-  if (return.errors) {
-    rErrors <- vector("list", length(modnames))
-    names(rErrors) <- modnames
-    rErrors[[1]] <- null.errors
-    rErrors[-1] <- alt.errors
-  }
-  if (return.loss) {
-    rLoss <- vector("list", length(modnames))
-    names(rLoss) <- modnames
-    rLoss[[1]] <- L(null.errors)
-    rLoss[-1] <- lapply(alt.errors, function(e) L(e))
-  }
-  if (return.forecasts) {
-    rForecasts <- vector("list", length(modnames))
-    names(rForecasts) <- modnames
-    rForecasts[[1]] <- apply.oos(R, data, null.model, window, "forecast")
-    rForecasts[-1] <- lapply(alt.model, function(alt) apply.oos(R, data, alt, window, "forecast"))
-  }
-  P1 <- length(null.errors)
-  
-  ## The '&&' is important (instead of '&') so that we don't evaluate
-  ## nobs(data2) if data2 is NULL.
+
+  ## get the difference in loss over the first oos period
+  ldiff1 <- lossDiff(null.model, alt.model, data, R, window, L,
+                     return.forecasts, return.errors)
+  P1 <- length(ldiff1[[1]])
+  k.diff <- sapply(alt.model, function(alt) ncol(model.matrix(alt(data)))) - k.null
+  ## estimate confidence interval for 2nd period oos average.  This is
+  ## more opaque than I'd like; tstats is an htest that we started
+  ## defining earlier; now we're going to replace it with a list of
+  ## htests; one for each alternative model.  To do so, we're going to
+  ## add the relevant attributes to the original we defined eariler.
+  tstats <-
+    lapply(seq_along(ldiff1), function(i) {
+      lavg <- mean(ldiff1[[i]])
+      lstd <- sd(ldiff1[[i]]) * sqrt(1/P1 + 1/P2)
+      ## we're going to sneak in two extra elements, avg and std, to
+      ## avoid recalculating them later.
+      buildhtest(tstats) <-
+        list(avg = lavg, std = lstd,
+             conf.int = cint(lavg, lstd, k.diff[i], P1, P2, R),
+             parameter = c(R, P1, P2),
+             parameter.text = c("R", "P1", "P2"))
+      tstats
+    })
+  ## get the loss difference over the second OOS period if
+  ## appropriate.  The '&&' is important (instead of '&') so that we
+  ## don't evaluate nobs(data2) if data2 is NULL.
   if (!is.null(data2) && P2 <= nobs(data2)) {
-    twosamples <- TRUE
-    data.name <- c(data.name, deparse(substitute(data2)))
-    data2 <- as.ts(data2)
+    d2name <- deparse(substitute(data2))
     ## if data2 is supplied, we calculate the out-of-sample loss over
     ## the second oos period.  We have to handle the rolling window
     ## differently than the fixed or recursive window, since R doesn't
     ## change for the rolling window.  This is kind of a bitch
     ## notationally if you need to allow for dynamic models.
-    dindex <- time(data)
-    cboth <- intersect(colnames(data), colnames(data2))
-    dfull <- ts(rbind(data[, cboth, drop=FALSE],
-                      window(data2[, cboth, drop=FALSE],
-                             end = time(data2)[P2])),
-                start = dindex[1], frequency = frequency(data))
+    data2 <- as.ts(dFull(data, data2[1:P2,]))
     if (window == "rolling") {
-      dfull <- window(dfull, start = dindex[nobs(data)-R+1])
+      data2 <- window(data2, start = time(data2)[nobs(data)-R+1])
       R2 <- R
     } else {
       R2 <- nobs(data)
     }
-    methodText <- paste("Two-sample OOS t-test, ", window, " window (", method, ")", sep = "")
-    null.errors2 <- apply.oos(R2, dfull, null.model, window, "error")
-    alt.errors2 <- lapply(alt.model, function(alt) apply.oos(R2, dfull, alt, window, "error"))
+    ## calculate oos loss over the second sample
+    ldiff2 <- lossDiff(null.model, alt.model, data2, R, window, L,
+                       return.forecasts, return.errors)
 
-    ## add any period-specific information that we want to return
-    addTs <- function(list1, null2, alt2) {
-      list1[[1]] <- cts(list1[[1]], null2)
-      list1[-1] <- lapply(seq_along(alt2), function(j) cts(list1[[j+1]], alt2[[j]]))
-      list1
-    }
-    if (return.errors) rErrors <- addTs(rErrors, null.errors2, alt.errors2)
-    if (return.loss) rLoss <- addTs(rLoss, L(null.errors2), lapply(alt.errors2, L))
-    if (return.forecasts) rForecasts <-
-      addTs(rForecasts, 
-            apply.oos(R2, dfull, null.model, window, "forecast"),
-            lapply(alt.model, function(alt) apply.oos(R2, dfull, alt, window, "forecast")))
-
+    ## add the forecasts and errors to those for the first sample if
+    ## requested.
+    addTS <- function(name)
+      lapply(seq_along(attr(ldiff1, name)), function(i)
+             cts(attr(ldiff1, name)[[i]], attr(ldiff2, name)[[i]]))
+    if (return.forecasts)
+      attr(ldiff1, "forecast") <- addTS("forecast")
+    if (return.errors)
+      attr(ldiff1, "error") <- addTS("error")
+    
+    ## finalize the statistics for the two-sample case
+    tstats <- lapply(seq_along(tstats), function(i) {
+      tst <- tstats[[i]]
+      lavg2 <- mean(ldiff2[[i]])
+      stat <- (tst$avg - lavg2) / tst$std
+      buildhtest(tst) <- 
+        list(estimate = c(tst$avg, lavg2),
+             estimate.text = c("OOS Avg 1", "OOS Avg 2"),
+             statistic = stat,
+             p.value = pval(stat, k.diff[i], P1, P2, R),             
+             data.name = c(tstats$data.name, d2name),
+             method.text = sprintf("Two-sample OOS t-test, %s window (%s)",
+             window, method))
+      tst[["avg"]] <- tst[["std"]] <- NULL
+      tst
+    })
   } else {
-    twosamples <- FALSE
-    methodText <- paste("One-sample OOS t-test, ", window, " window (", method, ")", sep = "")
+    ## calculate the p.value and remaining elements of each h-test for
+    ## the one-sample test
+    tstats <- lapply(seq_along(tstats), function(i) {
+      tst <- tstats[[i]]
+      stat <- tst$avg / tst$std
+      buildhtest(tst) <- 
+        list(estimate = tst$avg, estimate.text = "OOS Avg 1",
+             statistic = stat,
+             p.value = pval(stat, k.diff[i], P1, P2, R),
+             method.text = sprintf("One-sample OOS t-test, %s window (%s)",
+               window, method))
+      tst[["avg"]] <- tst[["std"]] <- NULL
+      tst                      
+    })
   }
 
-  rval <- htest.start("L.alt-bar", "L.null-bar", c(R, P1, P2), c("R", "P1", "P2"),
-                      methodText, data.name, alternative)
-
-  k.null <- ncol(model.matrix(null.model(data)))
-  ## actually calculate the oos t-statistics
-  tstats <- lapply(seq_along(alt.model), function(j) {
-    loss.diff <- L(null.errors) - L(alt.errors[[j]])
-    
-    mx <- mean(loss.diff)
-    std <- sd(loss.diff) * sqrt(1/P1 + 1/P2)
-    kdiff <- ncol(model.matrix(alt.model[[j]](data))) - k.null
-    
-    if (twosamples) {
-      loss.diff2 <- L(null.errors2) - L(alt.errors2[[j]])
-      my <- mean(loss.diff2)
-      htest.finish(rval, c(mx, my), c("OOS Avg. 1", "OOS Avg. 2"),
-                   (mx-my) / std, "oos-t2", pval((mx-my)/std, k = kdiff),
-                   cint(mx, std, k = kdiff), conf.level)
-    } else {
-      htest.finish(rval, mx, "OOS Avg. 1", mx/std, "oos-t2",
-                   pval(mx/std, k = kdiff), cint(mx, std, k = kdiff),
-                   conf.level)
-    }})
   if (!returnList) tstats <- tstats[[1]]
-  if (return.errors) attr(tstats, "errors") <- rErrors
-  if (return.loss) attr(tstats, "loss") <- rLoss
-  if (return.forecasts) attr(tstats, "forecasts") <- rForecasts
+  if (return.errors) attr(tstats, "errors") <- attr(ldiff1, "error")
+  if (return.forecasts) attr(tstats, "forecasts") <- attr(ldiff1, "forecast")
   tstats
 }

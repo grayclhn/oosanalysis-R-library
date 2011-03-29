@@ -15,6 +15,8 @@ rmcc.recursive <- function(startVals, k, nsims, ngrain) {
   dw <- array(rnorm(k * ngrain * nsims, mean = 0, sd = 1/sqrt(ngrain)),
               c(ngrain, nsims, k))
 
+  ## don't be alarmed by the 1/(1:ngrain); we're not going to use all
+  ## of these terms.
   wOverS <- (ngrain * apply(dw, c(2,3), cumsum) *
              array(1 / (1:ngrain), c(ngrain, nsims, k)))
 

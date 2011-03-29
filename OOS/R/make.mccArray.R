@@ -28,17 +28,24 @@ make.mccArray2 <- function(window, nsims, ngrain, kmax = 20,
     raw <- rmcc(rnRatio, k, nsims, ngrain, window)
     for (i in seq_along(rnRatio)) {
       ## retArray[i,,,] is going to correspond to R/N = i%
-      rn.i <- rnRatio[i]
+      r.i <- rnRatio[i]
       for (j in seq_along(rnRatio)) {
-        pn.j <- rnRatio[j]
+        p1.j <- rnRatio[j]
         ## retArray[,j,,] is going to correspond to P/N = i%
-        qn.ij <- (1 - rn.i - pn.j)
+        p2.ij <- (1 - r.i - p1.j)
         ## ad hoc correction for floating point imprecision.
-        if (isTRUE(all.equal(0, qn.ij))) qn.ij <- 0
+        if (isTRUE(all.equal(0, p2.ij))) p2.ij <- 0
         retArray[i,j,,k] <- 
-          if (qn.ij > 0) {
-            quantile(- (sqrt(pn.j/qn.ij) * (raw$gam1[i+j,] - 0.5 * raw$gam2[i+j,]) - (raw$gam1[i,] - 0.5 * raw$gam2[i,]))
-                     / sqrt(raw$gam2[i,]), quantiles)
+          if (p2.ij > 0) {
+            ## need to rescale G1, G2, L1, and L2 to agree with the
+            ## paper's notation.
+            rescale <- 1 / (p1.j + r.i)
+            G1 <- rescale * raw$gam1[i,]
+            G2 <- rescale * raw$gam2[i,]
+            L1 <- rescale * raw$gam1[i+j,]
+            L2 <- rescale * raw$gam2[i+j,]
+            quantile((G1 - G2/2 - sqrt(p1.j/p2.ij) * (L1 - L2/2)) / sqrt(G2),
+                     quantiles)
           } else {
             NA
           }
