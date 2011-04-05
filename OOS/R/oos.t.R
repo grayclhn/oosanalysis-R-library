@@ -209,6 +209,36 @@ oos.t <- function(null.model, alt.model, data, R, L = function(x) x^2,
   if (returnList) tstats else tstats[[1]]
 }
 
+pval <- function(method = c("DMW", "Mcc:07"),
+                 alternative = c("greater", "less", "two.sided"),
+                 tstat, k, P1, P2, R) {
+  method <- match.arg(method)
+  alternative <- match.arg(alternative)
+  pfn <- switch(method,
+                DMW =      function(x,...) pt(x, df = P1-1,...),
+                "Mcc:07" = function(x,...)
+                  pmccracken.2(x, k, R, P1, P2, window,...))
+  switch(alternative,
+         greater   = pfn(tstat),
+         less      = pfn(tstat, lower.tail = FALSE),
+         two.sided = 1 + pfn(-abs(tstat)) - pfn(abs(tstat)))
+}
+
+cint <- function(method = c("DMW", "Mcc:07"),
+                 alternative = c("greater", "less", "two.sided"),
+                 avg, std, k, P1, P2, R, conf.level) {
+  method <- match.arg(method)
+  alternative <- match.arg(alternative)
+  qfn <- switch(method,
+                DMW =      function(x,...) qt(x, df = P1-1),
+                "Mcc:07" = function(x,...)
+                  qmccracken.2(x, k, R, P1, P2, window,...))
+  switch(alternative,
+         greater   = c(avg + std * qfn(1 - conf.level), Inf),
+         less      = c(-Inf, avg + std * qfn(conf.level)),
+         two.sided = avg + std * qfn(c(1 - conf.level, 1 + conf.level) / 2))
+}           
+
 ## 'alternative' is the loss of the benchmark model relative to the
 ## alternative.  So the usual alternative is going to be that the loss
 ## of the null model is "greater" than that of the alternative.
@@ -241,51 +271,8 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
              alternative = alternative, null.value = "Avg(L.alt)",
              null.text = "Avg(L.null)", statistic.text = "oos-t2",
              conf.level = conf.level)
-
-  if (method == "DMW") {
-    ## I'm going to use the t-distribution for intervals, etc, for
-    ## consistency with the one sample t-test (I want them to give the
-    ## same results when P2 = Inf).  Obviously, this statistic is
-    ## coming from asymptotic normality and the finite sample
-    ## distribution is not a t distribution.  But this will be a
-    ## little more conservative than the normal distribution, and if
-    ## it affects your results then they're pretty sensitive anyway
-    ## and you should think some more about whether the asymptotics
-    ## are going to give reliable approximations.
-    pfn <- function(x, k, P1, P2, R,...) pt(x, df = P1-1,...)
-    qfn <- function(x, k, P1, P2, R,...) qt(x, df = P1-1,...)
-  } else {
-    pfn <- function(x, k, P1, P2, R,...)
-      pmccracken.2(x, k, R, P1, P2, window,...)
-    qfn <- function(x, k, P1, P2, R,...)
-      qmccracken.2(x, k, R, P1, P2, window,...)
-    ## override the supplied loss function
-    if (!missing(L))
-      warning("McCracken's (2007) test requires that the loss function be MSE, so your argument will be overridden")
-    L <- function(x) x^2
-  }
+  fns <- testfns(method, alternative)
   
-  if (alternative == "greater") {
-    pval <- function(tstat, k, P1, P2, R)
-      pfn(tstat, k, P1, P2, R, lower.tail = FALSE)
-    cint <- function(mx, std, k, P1, P2, R)
-      mx + std * c(- qfn(conf.level, k, P1, P2, R), Inf)
-  } else {
-    warning("The alternative is almost always 'greater'...")
-    if (alternative == "less") {
-      pval <- function(tstat, k, P1, P2, R)
-        pfn(tstat, k, P1, P2, R)
-      cint <- function(mx, std, k, P1, P2, R)
-        mx + std * c(-Inf, qfn(conf.level, k, P1, P2, R))
-    } else { 
-      pval <- function(tstat, k, P1, P2, R)
-        pfn(-tstat, k, P1, P2, R) + pfn(tstat, k, P1, P2, R)
-      cint <- function(mx, std, k, P1, P2, R)
-        mx + std * c(qfn(conf.level/2, k, P1, P2, R),
-                     qfn(0.5 * (1 + conf.level), k, P1, P2, R))
-    }
-  }
-
   ## get the difference in loss over the first oos period
   ldiff1 <- lossDiff(null.model, alt.model, data, R, window, L,
                      return.forecasts, return.errors)
@@ -304,7 +291,8 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
       ## avoid recalculating them later.
       buildhtest(tstats) <-
         list(avg = lavg, std = lstd,
-             conf.int = cint(lavg, lstd, k.diff[i], P1, P2, R),
+             conf.int = cint(method, altnernative, lavg, lstd,
+               k.diff[i], P1, P2, R, conf.level),
              parameter = c(R, P1, P2),
              parameter.text = c("R", "P1", "P2"))
       tstats
@@ -349,7 +337,7 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
         list(estimate = c(tst$avg, lavg2),
              estimate.text = c("OOS Avg 1", "OOS Avg 2"),
              statistic = stat,
-             p.value = pval(stat, k.diff[i], P1, P2, R),             
+             p.value = pval(method, alternative, stat, k.diff[i], P1, P2, R),             
              data.name = c(tstats$data.name, d2name),
              method.text = sprintf("Two-sample OOS t-test, %s window (%s)",
              window, method))
@@ -365,7 +353,7 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
       buildhtest(tst) <- 
         list(estimate = tst$avg, estimate.text = "OOS Avg 1",
              statistic = stat,
-             p.value = pval(stat, k.diff[i], P1, P2, R),
+             p.value = pval(method, alternative, stat, k.diff[i], P1, P2, R),
              method.text = sprintf("One-sample OOS t-test, %s window (%s)",
                window, method))
       tst[["avg"]] <- tst[["std"]] <- NULL
