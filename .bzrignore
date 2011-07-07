@@ -4,6 +4,9 @@
 *.tar.gz
 *.o
 *.so
+*.done
+*.local
+*.db
 FixedWindowPackage
 fwPackage.bzr
 .Rhistory

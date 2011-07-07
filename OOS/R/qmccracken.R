@@ -1,4 +1,5 @@
 interpolate <- function(at, coords, values) {
+  coords <- as.data.frame(coords)
   if (length(values) != nrow(coords))
     stop("'values' must have as many elements as 'coords' has rows.")
   if (length(at) != ncol(coords))

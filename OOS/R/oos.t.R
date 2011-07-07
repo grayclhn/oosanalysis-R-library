@@ -138,10 +138,11 @@ dFull <- function(data1, data2) {
 }
 
 oos.t <- function(null.model, alt.model, data, R, L = function(x) x^2,
-                  window = c("rolling", "recursive", "fixed"),
-                  method = c("DMW", "ClW:07", "Mcc:07"), alternative = "greater",
-                  conf.level = 0.95, return.forecasts = FALSE,
-                  return.errors = FALSE) {
+                  window = c("recursive", "rolling", "fixed"),
+                  method = c("DMW", "ClW:07", "Mcc:07", "Cal:11"),
+                  alternative = "greater", conf.level = 0.95,
+                  return.forecasts = FALSE, return.errors = FALSE) {
+  
   method <- match.arg(method)
   window <- match.arg(window)
   if (method %in% c("ClW:07", "Mcc:07")) {
@@ -158,12 +159,24 @@ oos.t <- function(null.model, alt.model, data, R, L = function(x) x^2,
   if (!returnList) alt.model <- list(alt = alt.model)
   if (R >= nobs(data)) stop("'R' is larger than the dataset")
 
-  if (method == "ClW:07") {
-    forecasts <- lapply(c(list(null = null.model), alt.model), function(m)
-                        apply.oos(R, data, m, window, "forecast"))
-    errors <-  lapply(c(list(null = null.model), alt.model), function(m)
+  if (method %in% c("ClW:07", "Cal:11")) {
+    if (method == "ClW:07") {
+      forecasts <- lapply(c(list(null = null.model), alt.model), function(m)
+                          apply.oos(R, data, m, window, "forecast"))
+      errors <-  lapply(c(list(null = null.model), alt.model), function(m)
                         apply.oos(R, data, m, window, "error"))
-    P <- length(ldiff1[[1]])
+    } else {
+      ## The difference between this method and the Clark-West method
+      ## is that here the null is estimated using the recursive window
+      ## and the alternative models are estimated with rolling windows.
+      forecasts <- c(list(null = apply.oos(R, data, null.model, "recursive", "forecast")),
+                     lapply(alt.model, function(m)
+                            apply.oos(R, data, m, "rolling", "forecast")))
+      errors <- c(list(null = apply.oos(R, data, null.model, "recursive", "error")),
+                  lapply(alt.model, function(m)
+                         apply.oos(R, data, m, "rolling", "error")))
+    }
+    P <- length(forecasts[[1]])
 
     oosObs <-
       lapply(seq_along(alt.model), function(i)
@@ -177,9 +190,9 @@ oos.t <- function(null.model, alt.model, data, R, L = function(x) x^2,
       newhtest(estimate = favg, estimate.text = "OOS Avg 1",
                statistic = tstat, parameter = c(R, P),
                p.value = pt(tstat, df = P-1, lower.tail = FALSE),
-               conf.int = favg + fstd * c(-qfn(conf.level, df = P-1), Inf),
-               method.text = sprintf("One-sample OOS t-test, %s window (ClW:07)",
-                 window))
+               conf.int = c(favg - fstd * qt(conf.level, df = P-1), Inf),
+               method.text = sprintf("One-sample OOS t-test, %s window (%s)",
+                 window, method))
     })
   } else {
     ## Use oos.t2 to calculate the statistic for the DMW and Mcc:07
@@ -211,6 +224,7 @@ oos.t <- function(null.model, alt.model, data, R, L = function(x) x^2,
 
 pval <- function(method = c("DMW", "Mcc:07"),
                  alternative = c("greater", "less", "two.sided"),
+                 window = c("fixed", "recursive", "rolling"),
                  tstat, k, P1, P2, R) {
   method <- match.arg(method)
   alternative <- match.arg(alternative)
@@ -219,13 +233,14 @@ pval <- function(method = c("DMW", "Mcc:07"),
                 "Mcc:07" = function(x,...)
                   pmccracken.2(x, k, R, P1, P2, window,...))
   switch(alternative,
-         greater   = pfn(tstat),
-         less      = pfn(tstat, lower.tail = FALSE),
+         greater   = pfn(tstat, lower.tail = FALSE),
+         less      = pfn(tstat),
          two.sided = 1 + pfn(-abs(tstat)) - pfn(abs(tstat)))
 }
 
 cint <- function(method = c("DMW", "Mcc:07"),
                  alternative = c("greater", "less", "two.sided"),
+                 window = c("fixed", "recursive", "rolling"),
                  avg, std, k, P1, P2, R, conf.level) {
   method <- match.arg(method)
   alternative <- match.arg(alternative)
@@ -271,7 +286,6 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
              alternative = alternative, null.value = "Avg(L.alt)",
              null.text = "Avg(L.null)", statistic.text = "oos-t2",
              conf.level = conf.level)
-  fns <- testfns(method, alternative)
   
   ## get the difference in loss over the first oos period
   ldiff1 <- lossDiff(null.model, alt.model, data, R, window, L,
@@ -291,7 +305,7 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
       ## avoid recalculating them later.
       buildhtest(tstats) <-
         list(avg = lavg, std = lstd,
-             conf.int = cint(method, altnernative, lavg, lstd,
+             conf.int = cint(method, alternative, window, lavg, lstd,
                k.diff[i], P1, P2, R, conf.level),
              parameter = c(R, P1, P2),
              parameter.text = c("R", "P1", "P2"))
@@ -337,7 +351,7 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
         list(estimate = c(tst$avg, lavg2),
              estimate.text = c("OOS Avg 1", "OOS Avg 2"),
              statistic = stat,
-             p.value = pval(method, alternative, stat, k.diff[i], P1, P2, R),             
+             p.value = pval(method, alternative, window, stat, k.diff[i], P1, P2, R),             
              data.name = c(tstats$data.name, d2name),
              method.text = sprintf("Two-sample OOS t-test, %s window (%s)",
              window, method))
@@ -353,7 +367,7 @@ oos.t2 <- function(null.model, alt.model, data, data2 = NULL,
       buildhtest(tst) <- 
         list(estimate = tst$avg, estimate.text = "OOS Avg 1",
              statistic = stat,
-             p.value = pval(method, alternative, stat, k.diff[i], P1, P2, R),
+             p.value = pval(method, alternative, window, stat, k.diff[i], P1, P2, R),
              method.text = sprintf("One-sample OOS t-test, %s window (%s)",
                window, method))
       tst[["avg"]] <- tst[["std"]] <- NULL

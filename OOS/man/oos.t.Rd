@@ -118,6 +118,8 @@ check(tstat$estimate,  oos.tstat2$estimate)
 d <- data.frame(x = rnorm(200), y = rnorm(200), z = rnorm(200))
 oos.t(null.model, alt.modelz, d, 80, window = "rolling", method = "DMW")
 oos.t(null.model, alt.modelz, d, 80, window = "rolling", method = "Mcc:07")
+oos.t(null.model, alt.modelz, d, 80, window = "rolling", method = "ClW:07")
+oos.t(null.model, alt.modelz, d, 80, method = "Cal:11")
 
 d2 <- data.frame(x = rnorm(60), y = rnorm(60))
 oos.t2(null.model, alt.modelx, d, data2 = d2, R = 80,
