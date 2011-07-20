@@ -32,35 +32,31 @@ Install: $(zipfile)
 	touch $@
 
 ## installs a package I need to use to create this package.
-rsetup.done: $(dbframe)
+R/rsetup.done: $(dbframe)
 	$(ssh) $(sshFLAGS) $(remote) "if not exist $(rrdir) mkdir $(rrdir)"
 	$(scp) $(scpFLAGS) $< $(remote):$(lrdir)/dbframe.tar.gz
 	$(ssh) $(sshFLAGS) $(remote) "$(sshpreamble) && R CMD INSTALL dbframe.tar.gz"
 	touch $@
 
-mccracken3-quantiles.done: mccracken2-index.done
-mccracken2-index.done: mccracken1-genrv.done
-mccracken1-genrv.done: rsetup.done
-mccracken1-genrv.done mccracken2-index.done mccracken3-quantiles.done: %.done: %.R
-	$(scp) $(scpFLAGS) $< $(remote):$(lrdir)/$<
-	$(ssh) $(sshFLAGS) $(remote) "$(sshpreamble) && RScript --vanilla --slave $<"
+R/mccracken3-quantiles.done: R/mccracken2-index.done
+R/mccracken2-index.done: R/mccracken1-genrv.done
+R/mccracken1-genrv.done: R/rsetup.done
+R/mccracken1-genrv.done R/mccracken2-index.done R/mccracken3-quantiles.done: %.done: %.R
+	$(scp) $(scpFLAGS) $< $(remote):$(lrdir)/$(notdir $<)
+	$(ssh) $(sshFLAGS) $(remote) "$(sshpreamble) && RScript --vanilla --slave $(notdir $<)"
 	touch $@
 
 ## local versions
-mccracken3-quantiles.local: mccracken2-index.local
-mccracken2-index.local: mccracken1-genrv.local
-mccracken1-genrv.local mccracken2-index.local mccracken3-quantiles.local: %.local: %.R
+R/mccracken3-quantiles.local: R/mccracken2-index.local
+R/mccracken2-index.local: R/mccracken1-genrv.local
+R/mccracken1-genrv.local R/mccracken2-index.local R/mccracken3-quantiles.local: %.local: %.R
 	$(Rscript) $(RFLAGS) $<
 	touch $@
 
 # create the .Rdata file from the sqlite simulation file
-$(data): mccracken3-quantiles.done
+$(data): R/mccracken3-quantiles.done
 	$(ssh) $(sshFLAGS) $(remote) "$(sshpreamble) && RScript --vanilla --slave -e \"library(dbframe); qdata <- dbframe('qmc1', 'mccracken.db'); mccArray <- select(qdata); save(mccArray, file = 'mccArray.RData')"         
 	$(scp) $(scpFLAGS) $(remote):$(lrdir)/mccArray.RData $@
-
-# $(data): R/mccArray.R OOS/R/make.mccArray.R OOS/R/rmcc.R
-# 	mkdir -p $(dir $@)
-#	echo 'datafile <- "$@"' | cat - $< | $(Rscript) - 
 
 # I like this next rule.  The 'check' file depends on every file that's
 # under version control or unknown in the $(package) subdirectory.

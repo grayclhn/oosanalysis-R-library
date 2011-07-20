@@ -1,2 +1,1 @@
-export(apply.oos, nobs, forecast.error, oos.t, oos.t2, qmccracken.1,
-       qmccracken.2, pmccracken.1, pmccracken.2, pval, cint)
+export(apply.oos, nobs, forecast.error, oos.t, oos.t2, critMcc1, critMcc2)

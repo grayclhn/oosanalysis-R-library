@@ -1,7 +1,7 @@
 Package: OOS
 Type: Package
 Title: Functions to compare forecasting models out-of-sample
-Version: 0.01
+Version: 0.1
 Date: 2011-01-28
 Author: Gray Calhoun
 Maintainer: Gray Calhoun <gcalhoun@iastate.edu>
