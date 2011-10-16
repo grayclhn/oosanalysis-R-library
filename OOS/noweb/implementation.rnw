@@ -1,0 +1,76 @@
+\documentclass{article}
+\usepackage{noweb,setspace,amsmath,amsthm,amssymb,microtype}
+\usepackage[round]{natbib}
+\bibliographystyle{abbrvnat}
+\frenchspacing
+
+% These next two lines make latex more willing to break code chunks
+% across pages:
+\def\nwendcode{\endtrivlist \endgroup}
+\let\nwdocspar=\par
+
+\renewcommand{\Re}{\ensuremath{\mathbb{R}}}
+\DeclareMathOperator{\tr}{tr}
+\DeclareMathOperator{\WN}{WN}
+\DeclareMathOperator{\E}{E}
+\DeclareMathOperator{\var}{var}
+\DeclareMathOperator{\N}{N}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\plim}{plim}
+\DeclareMathOperator{\eig}{\lambda_{\max}}
+\DeclareMathOperator{\eigl}{\lambda_{\min}}
+\DeclareMathOperator{\p}{Pr}
+\DeclareMathOperator{\ind}{1}
+
+
+\begin{document}
+
+\title{Implementation details: Functions to compare forecasting models out-of-sample}
+\author{Gray Calhoun\\Iowa State University} \date{\today}
+
+\maketitle
+\tableofcontents
+
+Some introductory text
+
+\section{Main functions?}
+<<forecast.error.R>>=
+forecast.error <- function(object, newdata,...) {
+  if (missing(newdata) || is.null(newdata)) {
+    stop("must supply 'newdata'")
+  }
+  ## If 'newdata' is a ts object, we need to make sure that dynamic
+  ## models don't mess up the indexing
+  tt <- terms(object)
+  Y.new <- model.response(model.frame(tt, newdata))
+  if (is.ts(newdata)) {
+    Y.new <- ts(Y.new, start = start(newdata),
+                frequency = frequency(newdata))
+  }
+  Y.hat <- predict(object, newdata,...)
+  unname(Y.new - Y.hat)
+}
+@
+
+\section{Utility functions}
+<<tr.R>>=
+tr <- function(M) sum(diag(M))
+@
+
+<<cts.R>>=
+cts <- function(x, y) {
+  x <- as.ts(x)
+  y <- as.ts(y)
+  freq <- frequency(x)
+  if (freq != frequency(y)) stop("both x and y must have the same frequency")
+  ts(unname(c(x, y)), start = start(x), end = end(y), frequency = freq)
+}
+@
+
+\section{Namespace}
+<<NAMESPACE>>=
+export(apply.oos, nobs, forecast.error, oos.t, oos.t2, critMcc1, critMcc2)
+@
+
+\bibliography{AllRefs}
+\end{document}
