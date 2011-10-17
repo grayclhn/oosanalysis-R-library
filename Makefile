@@ -19,11 +19,13 @@ Install: $(zipfile)
 	touch $@
 
 $(Rfiles) OOS/NAMESPACE: OOS/noweb/implementation.rnw
+	mkdir -p OOS/R
 	notangle -R$(@F) $< > $@
 OOS/inst/doc/implementation.pdf: OOS/inst/doc/implementation.tex
 %.pdf: %.tex
 	cd $(dir $<) && pdflatex -p -q -b $(<F)
 OOS/inst/doc/implementation.tex: OOS/noweb/implementation.rnw
+	mkdir -p OOS/inst/doc
 	noweave -latex -x -delay $< > $@
 
 # I like this next rule.  The 'check' file depends on every file that's
