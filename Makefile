@@ -5,7 +5,7 @@ zipfile := $(package)_$(version).tar.gz
 RFLAGS := --vanilla --slave
 Rscript := Rscript
 
-Rfiles := $(patsubst OOS/man/%.Rd,OOS/R/%.R,$(wildcard OOS/man/*.Rd))
+Rnoweb := $(patsubst OOS/man/%.Rd,OOS/R/%.R,$(filter-out OOS/man/nobs-methods.Rd,$(wildcard OOS/man/*.Rd)))
 
 .PHONY: all build
 
@@ -23,7 +23,7 @@ $(Rfiles) OOS/NAMESPACE: OOS/noweb/implementation.rnw
 	notangle -R$(@F) $< > $@
 OOS/inst/doc/implementation.pdf: OOS/inst/doc/implementation.tex
 %.pdf: %.tex
-	cd $(dir $<) && pdflatex -p -q -b $(<F)
+	cd $(dir $<) && pdflatex -interaction=batchmode $(<F)
 OOS/inst/doc/implementation.tex: OOS/noweb/implementation.rnw
 	mkdir -p OOS/inst/doc
 	noweave -latex -x -delay $< > $@
