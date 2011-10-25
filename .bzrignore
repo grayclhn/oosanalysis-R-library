@@ -1,5 +1,8 @@
 auto/
+
 R/*
+oosAnalysis/R
+oosAnalysis/inst
 
 *~
 *.Rout
@@ -13,9 +16,9 @@ R/*
 FixedWindowPackage
 fwPackage.bzr
 .Rhistory
-Check
-Install
-Online
+check
+install
+online
 old-files
 data
 R

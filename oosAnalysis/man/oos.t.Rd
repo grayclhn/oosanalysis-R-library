@@ -1,6 +1,5 @@
 \name{oos.t}
 \alias{oos.t}
-\alias{oos.t2}
 \title{Out-of-sample t-test for one and two OOS periods}
 
 \description{Calculates the out-of-sample t test.}
@@ -11,13 +10,6 @@ oos.t(null.model, alt.model, data, R,
       window = c("rolling", "recursive", "fixed"),
       method = c("DMW", "McC07"), alternative = "greater", 
       conf.level = 0.95)
-
-oos.t2(null.model, alt.model, data,
-       data2 = NULL, R, P2 = nobs(data2),
-       L = function(x) x^2,
-       window = c("rolling", "recursive", "fixed"),
-       method = c("DMW", "McC07"), alternative = "greater",
-       conf.level = 0.95)
 }
 
 \details{}
@@ -32,16 +24,8 @@ oos.t2(null.model, alt.model, data,
 
 \item{data}{A data frame.}
 
-\item{data2}{A second data frame with the same variables as the first, to
-  calculate a second out-of-sample average.}
-
 \item{R}{The number of observations in the estimation window.  This
   must be less than the number of observations in data.}
-
-\item{P2}{The number of observations in the second test sample.  When
-  data2 is supplied, this will typically be the number of observations
-  in data2.  But when data2 is not supplied, P2 should be the number of
-  observations in a hypothetical second dataset.}
 
 \item{L}{A loss function that takes a single argument, the forecast error.}
 

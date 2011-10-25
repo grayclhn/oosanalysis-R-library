@@ -1,35 +1,38 @@
-package := OOS
+package := oosAnalysis
 version := 0.2
 zipfile := $(package)_$(version).tar.gz
 
-RFLAGS := --vanilla --slave
-Rscript := Rscript
+RFLAGS   := --vanilla --slave
+Rscript  := Rscript
+latexmk  := /usr/local/texlive/2009/bin/x86_64-linux/latexmk
+LATEXMKFLAGS := -pdf -silent
+noweave := noweave
+notangle:= notangle
 
 Rnoweb := $(patsubst OOS/man/%.Rd,OOS/R/%.R,$(filter-out OOS/man/nobs-methods.Rd,$(wildcard OOS/man/*.Rd)))
 
 .PHONY: all build
 
-all: build Install OOS/inst/doc/implementation.pdf
+all: check build install OOS/inst/doc/implementation.pdf
 build: $(zipfile)
 $(zipfile): Check 
 	R CMD build $(package)
 
-Install: $(zipfile)
+install: $(zipfile)
 	R CMD INSTALL $(package)
 	touch $@
 
 $(Rfiles) OOS/NAMESPACE: OOS/noweb/implementation.rnw
 	mkdir -p OOS/R
-	notangle -R$(@F) $< > $@
-OOS/inst/doc/implementation.pdf: OOS/inst/doc/implementation.tex
+	$(notangle) -R$(@F) $< | cpif $@
 %.pdf: %.tex
-	cd $(dir $<) && pdflatex -interaction=batchmode $(<F)
+	cd $(dir $<) && $(latexmk) $(LATEXMKFLAGS) $<
 OOS/inst/doc/implementation.tex: OOS/noweb/implementation.rnw
 	mkdir -p OOS/inst/doc
-	noweave -latex -x -delay $< > $@
+	$(noweave) -latex -x -delay $< | sed /^#/d | cpif $@
 
 # I like this next rule.  The 'check' file depends on every file that's
 # under version control or unknown in the $(package) subdirectory.
-Check: $(Rfiles) OOS/NAMESPACE $(addprefix $(package)/,$(shell bzr ls $(package)/ -R --unknown -V --kind=file))
+check: $(Rfiles) OOS/NAMESPACE $(addprefix $(package)/,$(shell bzr ls $(package)/ -R --unknown -V --kind=file))
 	R CMD check $(package)
 	touch $@

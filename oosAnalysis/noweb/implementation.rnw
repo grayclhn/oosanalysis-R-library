@@ -25,7 +25,7 @@
 
 \begin{document}
 
-\title{Implementation details: Functions to compare forecasting models out-of-sample}
+\title{Implementation details: OOS package}
 \author{Gray Calhoun\\Iowa State University} \date{\today}
 
 \maketitle
