@@ -1,4 +1,4 @@
-Package: oosAnalysis
+Package: oosanalysis
 Type: Package
 Title: Functions for out-of-sample comparisons of forecasting models
 Version: 0.2

@@ -1,0 +1,463 @@
+\documentclass[11pt]{article}
+\usepackage{noweb,setspace,amsmath,amsthm,amssymb,microtype,eco}
+\usepackage[round]{natbib}
+\usepackage[margin = 1in]{geometry}
+\frenchspacing
+\bibliographystyle{abbrvnat}
+
+% These next two lines make latex more willing to break code chunks
+% across pages:
+\def\nwendcode{\endtrivlist \endgroup}
+\let\nwdocspar=\par
+\noweboptions{longxref}
+
+\newcommand{\oos}{\textsc{oos}}
+
+\renewcommand{\Re}{\ensuremath{\mathbb{R}}}
+\DeclareMathOperator{\tr}{tr}
+\DeclareMathOperator{\WN}{WN}
+\DeclareMathOperator{\E}{E}
+\DeclareMathOperator{\var}{var}
+\DeclareMathOperator{\N}{N}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\plim}{plim}
+\DeclareMathOperator{\eig}{\lambda_{\max}}
+\DeclareMathOperator{\eigl}{\lambda_{\min}}
+\DeclareMathOperator{\p}{Pr}
+\DeclareMathOperator{\ind}{1}
+
+
+\begin{document}
+
+\title{Implementation details: oosanalysis package}
+\author{Gray Calhoun\\Iowa State University} \date{\today}
+
+\maketitle
+\tableofcontents
+
+\section{Test statistics for a pair of comparisons}
+
+This section describes the code for the actual test statistics.
+
+\subsection{Diebold-Mariano-West test statistic}
+Probably the most important of the \oos\ statistics is the
+Diebold-Mariano-West test \citep{DiM:95,Wes:96}.  I implement
+their statistic in two stages.  The first function does the
+calculation and the second extracts the necessary processes and
+matrics from the data set.
+
+The arguments for [[dmw.calculation]] are, using notation from
+\citet{Wes:96},
+\begin{itemize}
+\item [[f]] a vector of the actual \oos\ sequence
+\end{itemize}
+<<dmw.R>>=
+dmw.calculation <- function(f, h, BF, R, vcv, 
+                            window = c("recursive", "rolling", "fixed")) {
+  lambda <- dmw.lambda(length(f) / R, window)
+  hBF <- tcrossprod(as.matrix(h), BF)
+  S <- vcv(cbind(f, hBF))
+  return(list(mu = mean(f), sd = sqrt(S[1,1] + 
+                              lambda$fh * (S[1,2] + S[2,1]) + lambda$hh * S[2,2])))
+}
+@ 
+
+The function [[dmw.lambda]] calculates the scale terms used to
+calculate the asymptotic covariance matrix of the \oos\ average, $\bar
+f$.  \citet{Wes:96} derives the formula for the recursive window and
+\citet{WeM:98} for the rolling and fixed windows.
+<<dmw.R>>=
+dmw.lambda <- function(pi, window = c("recursive", "rolling", "fixed")) {
+  window <- match.arg(window)
+  if (window == "recursive") {
+    lambda.fh <- 1 - log(1 + pi) / pi
+    lambda.hh <- 2 * lambda.fh
+  } else if (window == "fixed") {
+    lambda.fh <- 0
+    lambda.hh <- pi
+  } else if (window == "rolling" && pi <= 1) {
+    lambda.fh <- pi/2
+    lambda.hh <- pi - pi^2 / 3
+  } else if (window == "rolling" && pi > 1) {
+    lambda.fh <- 1 - 1 / (2 * pi)
+    lambda.hh <- pi
+  }
+  return(list(fh = lambda.fh, hh = lambda.hh))
+}
+@ 
+
+\subsection{Clark and West test statistic}
+
+<<clarkwest.R>>=
+clarkwest.calculation <- function(target, null.forecast, alt.forecast) {
+  P <- length(target)
+  oos.sequence <- ((target - null.forecast)^2 - 
+                   (target - alt.forecast)^2 + 
+                   (null.forecast - alt.forecast)^2)
+  return(list(mu = mean(oos.sequence), sd = sd(oos.sequence)))
+}
+@ 
+
+\subsection{Mixed window test statistic}
+
+This subsection implements the statistic proposed by \citet{Cal:11b}.
+This statistic uses a recursive window for the benchmark and a
+fixed-length rolling or fixed window for the alternative.
+<<mixedwindow.R>>=
+mixedwindow <- function(d, R, null, alt, xfn, yfn, 
+                        window = c("fixed", "rolling"), vcv = var) {
+  window <- match.arg(window)
+  n <- nrow(d)
+  oos <- (R+1):n
+
+  X <- xfn(d)
+  y <- yfn(d)
+  pnull <- apply.oos(R, d, null, "recursive", "forecast")
+  palt  <- apply.oos(R, d, alt, window, "forecast")
+  enull <- y[oos] - pnull
+  pdiff <- pnull - palt
+  
+  dmw.calculation(f  = enull^2 - (y[oos] - palt)^2 + pdiff^2,
+                  h  = enull * X[oos,,drop=FALSE],
+                  BF = 2 * solve(crossprod(X)/n, 
+                    colMeans((pdiff - enull) * X[oos,,drop=FALSE])),
+                  R, vcv, window = "recursive")
+}
+@ 
+
+\subsection{Critical values for Clark and McCracken's statistics}
+
+To be added later
+
+\section{Out-of-sample bootstrap}
+
+calculate the indices that give you a stationary bootstrap draw
+<<mixedwindow.R>>=
+iboot <- function(n, b) {
+  series <- rep(NA, n)
+  bootindex <- 1
+  repeat {
+    ##    obsindex <- 1 + (seq.int(sample(1:n, 1), length.out = rgeom(1, 1/b)) %% n)
+    obsindex <- 1 + seq.int(sample(1:n,1), length.out = b) %% n
+    if (length(obsindex) > 0) {
+      bootend <- min(bootindex + length(obsindex) - 1, n)
+      series[bootindex:bootend] <- obsindex[1:(bootend - bootindex + 1)]
+      bootindex <- bootend + 1
+      if (bootindex > n) break
+    }
+  }
+  series
+}
+@ 
+
+use the stepdown procedure to test multiple models
+<<mixedwindow.R>>=
+caltest <- function(d, R, null, palt, yfn, xfn = NULL,
+                    b, nboot, level = .05) {
+  n <- nrow(d)
+  oos <- (R+1):n
+  pnull <- apply.oos(R, d, null, "recursive", "forecast")
+
+  if (is.function(xfn)) {
+    X <- xfn(d)
+    B <- solve(crossprod(X)/n)
+    oosstats <- sapply(palt, function(a) {
+      stats <- calmain(d, R, pnull, a, yfn, xfn,
+                       crossprod(B, colMeans(X[oos,,drop=FALSE] * (pnull - a))))
+      stats[1] / stats[2]
+    })
+  } else {
+    oosstats <- sapply(palt, function(a) {
+      stats <- calmain(d, R, pnull, a, yfn)
+      stats[1] / stats[2]
+    })
+  }
+  
+  boots <- as.matrix(calboot(d, R, null, palt, yfn, xfn, b, nboot),
+                     nrow = nboot)
+  ## do the stepdown procedure
+  reject <- rep(FALSE, length(oosstats))
+  nreject.after <- 0
+  nreject.before <- Inf
+  ## repeat this until we stop rejecting models
+  while ((nreject.after != nreject.before) &
+         (nreject.after != length(reject))) {
+    nreject.before <- nreject.after
+    crit <- quantile(apply(boots[,!reject,drop=FALSE], 1, max), 1 - level)
+    reject[oosstats > crit] <- TRUE
+    nreject.after <- sum(reject)
+  }
+  list(crit = crit, tstats = oosstats, rejected = oosstats[reject])
+}
+@ 
+
+<<mixedwindow.R>>=
+calboot <- function(d, R, null, palt, yfn, xfn, b, nboot) {
+  n <- nrow(d)
+  oos <- (R+1):n
+  P <- n-R
+
+  palt <- as.data.frame(palt)
+  
+  ## add the alternative forecasts to the data frame
+  d[,names(palt)] <- NA
+  d[oos,names(palt)] <- palt
+
+  ## get the location parameter for the bootstrap distribution.
+  pnullFull <- predict(null(d))[oos]
+  y <- yfn(d[oos,])
+  bootmean <- colMeans(c(y - pnullFull)^2 - (y - palt)^2 + (pnullFull - palt)^2)
+
+  ## generate mean and variance via stationary bootstrap
+  bsims <- replicate(nboot, {
+    dboot <- rbind(d[-oos,,drop=FALSE], d[R + iboot(P,b),])
+    pnull <- apply.oos(R, dboot, null, "recursive", "forecast")
+    if (is.function(xfn)) {
+      X <- xfn(dboot)
+      B <- solve(crossprod(X)/nrow(d))
+      sapply(names(palt), function(a) {
+        stats <- calmain(dboot, R, pnull, dboot[oos,a], yfn, xfn,
+                         crossprod(B, colMeans(X[oos,,drop=FALSE] * (pnull - dboot[oos,a]))))
+        (stats[1] - bootmean[a]) / stats[2]
+      })
+    } else {
+      sapply(names(palt), function(a) {
+        stats <- calmain(dboot, R, pnull, dboot[oos,a], yfn)
+        (stats[1] - bootmean[a]) / stats[2]
+    })
+  }})
+  if (is.matrix(bsims)) {
+    bsims <- data.frame(t(bsims))
+  } else {
+    bsims <- data.frame(bsims)
+  }
+  names(bsims) <- names(palt)
+  bsims
+}
+@ 
+
+\section{Functions to produce out-of-sample forecasts and errors}
+
+<<forecast.error.R>>=
+forecast.error <- function(object, newdata,...) {
+  if (missing(newdata) || is.null(newdata)) {
+    stop("must supply 'newdata'")
+  }
+  ## If 'newdata' is a ts object, we need to make sure that dynamic
+  ## models don't mess up the indexing
+  tt <- terms(object)
+  Y.new <- model.response(model.frame(tt, newdata))
+  if (is.ts(newdata)) {
+    Y.new <- ts(Y.new, start = start(newdata),
+                frequency = frequency(newdata))
+  }
+  Y.hat <- predict(object, newdata,...)
+  unname(Y.new - Y.hat)
+}
+@
+
+<<apply.oos.R>>=
+apply.oos <- function(R, d, model,
+                      window = c("rolling", "recursive", "fixed"),
+                      ret = c("forecast", "error"),...) {
+  window <- match.arg(window)
+  ret <- match.arg(ret)
+  n <- nobs(d)
+  d <- as.ts(d)
+  p <- time(d)
+  predfn <- switch(ret, forecast = predict, error = forecast.error)
+  ## note that in all of the switch statements, we're going to let
+  ## 'newdata' include the training sample, and then just take the
+  ## last forecast or forecast error.  This is so that dynamic models
+  ## can get their regressors from the training sample.  For the same
+  ## reason, we make everything a time series and use windows, instead
+  ## of subsetting (for some reason, time series objects lose their
+  ## time series properties after subsetting, which is kind of
+  ## annoying).
+  ## 
+  ## Note that the "predict" methods are kind of crappy, in that they
+  ## return a vector of the same length as "newdata" has observations,
+  ## even when some of the observations are lost to lag strucutre,
+  ## etc.
+  ##
+  ## As you can imagine, this code is *extremely* slow.
+  lastPred <- function(startEst, endEst, s,
+                       m = model(window(d, start = p[startEst], end = p[endEst]),
+                         ...),...) {
+    predictions <- predfn(m, newdata = window(d, start = p[startEst], end = p[s]))
+    if (is.ts(predictions)) {
+      window(predictions, start = p[s], end = p[s])
+    } else {
+      tail(predictions, 1)
+    }
+  }
+  
+  ts(unname(switch(window,
+                   recursive = sapply((R+1):n, function(s) lastPred(1, s-1, s,...)),
+                   rolling =   sapply((R+1):n, function(s) lastPred(s-R, s-1, s,...)),
+                   fixed = {
+                     m <- model(window(d, end = p[R]),...)
+                     sapply((R+1):n, function(s) lastPred(1, R, s, m))
+                   })), end = end(d), frequency = frequency(d))
+}
+@
+
+\section{Utility functions}
+<<lagmatrix.R>>=
+lagmatrix <- function(x, L) {
+  x <- as.ts(x)
+  xmat <- do.call(cbind, lapply(seq(length = L), function(s) lag(x, -s)))
+  if (!is.matrix(xmat)) dim(xmat) <- c(length(xmat), 1)
+  if (is.null(colnames(x))) {
+    colnames(xmat) <- rep(paste("L", 1:L, sep = ""),
+                          each = ncol(x))
+  } else {
+    colnames(xmat) <- c(sapply(1:L, function(i)
+                        paste(colnames(x), "L", i, sep = "")))
+  }
+  window(xmat, start = c(L,0)+start(x), end = end(x))
+}
+@
+
+<<nobs.R>>=
+setGeneric("nobs", function(x,...) standardGeneric("nobs"))
+setMethod("nobs", "data.frame", function(x) nrow(x))
+setMethod("nobs", "zoo", function(x) nrow(x))
+setMethod("nobs", "mts", function(x) nrow(x))
+setMethod("nobs", "matrix", function(x) nrow(x))
+@
+
+<<tr.R>>=
+tr <- function(M) sum(diag(M))
+@
+
+<<cts.R>>=
+cts <- function(x, y) {
+  x <- as.ts(x)
+  y <- as.ts(y)
+  freq <- frequency(x)
+  if (freq != frequency(y)) stop("both x and y must have the same frequency")
+  ts(unname(c(x, y)), start = start(x), end = end(y), frequency = freq)
+}
+@
+
+<<buildhtest.R>>=
+newhtest <- function(...) {
+  x <- list()
+  buildhtest(x) <- list(...)
+  x
+}
+
+## a more general version of 'names', just reflecting the fact that
+## confidence intervals aren't stored as "names" for some reason.
+hNames <- function(x, elem = "") {
+  if (elem == "conf.int") {
+    attr(x, "conf.level")
+  } else {
+    names(x)
+  }
+}
+
+'hNames<-' <- function(x, elem = "", value) {
+  if (elem == "conf.int") {
+    attr(x, "conf.level") <- value
+  } else {
+    names(x) <- value
+  }
+  x
+}
+
+'buildhtest<-' <- function(x, value) {
+  ## an htest is a list (with class htest) and the following elements:
+  ## 'null.value' (with name 'null.text')
+  ## 'parameter'  (with name 'parameter.text')
+  ## 'method'
+  ## 'data.name'
+  ## 'alternative'
+  ## 'estimate'   (with name 'estimate.text')
+  ## 'statistic'  (with name 'statistic.text')
+  ## 'p.value'
+  ## 'conf.int'   (with attribute 'conf.level')
+    
+  'positionText<-' <- function(x, value) {
+    elem <- value[1]
+    elem.text <- value[2]
+    xnames <- names(x)
+    ielem <- which(xnames == elem)
+    nelem <- sum(ielem)
+    if (nelem >= 2) {
+      ## we're replacing the 'elem' entry; we just need to make sure
+      ## that we keep the names from the existing entry
+      if (is.null(hNames(x[[max(ielem)]], elem))) {
+        hNames(x[[tail(ielem, 1)]], elem) <- hNames(x[[min(ielem)]], elem)
+      }
+      x[head(ielem, -1)] <- NULL
+    }
+    if (elem.text %in% xnames) {
+      ## if 'elem' is missing, add it with value NA.
+      if (nelem == 0) {
+        x <- c(x, list(NA))
+        names(x) <- c(xnames, elem)
+      }
+      hNames(x[[elem]], elem) <- x[[elem.text]]
+      x[[elem.text]] <- NULL
+    }
+    x
+  }
+  
+  x <- c(as.list(x), as.list(value))
+  positionText(x) <- c("parameter", "parameter.text")
+  positionText(x) <- c("null.value", "null.text")
+  positionText(x) <- c("estimate", "estimate.text")
+  positionText(x) <- c("statistic", "statistic.text")
+  positionText(x) <- c("conf.int", "conf.level")
+  class(x) <- "htest"
+  x
+}
+@ 
+
+<<dFull.R>>=
+dFull <- function(data1, data2) {
+  if (is.ts(data1)) {
+    freq <- frequency(data1)
+    s1 <- time(data1)[1]
+    f1 <- tail(time(data1), 1)
+    if (is.ts(data2)) {
+      s2 <- time(data2)[1]
+      f2 <- tail(time(data2), 1)
+    } else {
+      s2 <- tail(time(lag(data1, -1)), 1)
+      f2 <- tail(time(lag(data1, -nobs(data2))), 1)
+    }
+  } else if (is.ts(data2)) {
+    freq <- frequency(data2)
+    s2 <- time(data2)[1]
+    f2 <- tail(time(data2), 1)
+    s1 <- time(lag(data2, nobs(data1)))[1]
+    f1 <- time(lag(data2, 1))[1]
+  } else {
+    data1[,setdiff(names(data2), names(data1))] <- NA
+    data2[,setdiff(names(data1), names(data2))] <- NA
+    return(rbind(data1, data2))
+  }
+  ## this is a pretty crappy way to assemble the time series matrix;
+  cols <- union(colnames(data1), colnames(data2))
+  m <- ts(matrix(NA, nobs(data1) + nobs(data2), length(cols)),
+          start = s1, end = f2, frequency = freq)
+  colnames(m) <- cols
+  for (cd in colnames(data1)) 
+    window(m[, cd], start = s1, end = f1) <- data1[, cd]
+  for (cd in colnames(data2))
+    window(m[, cd], start = s2, end = f2) <- data2[, cd]
+  m
+}
+@ 
+
+\section{Namespace}
+<<NAMESPACE>>=
+export(apply.oos, forecast.error, dmw.calculation, clarkwest.calculation,
+       mixedwindow)
+@
+
+\bibliography{AllRefs}
+\end{document}

@@ -1,4 +1,4 @@
-package := oosAnalysis
+package := oosanalysis
 version := 0.2
 zipfile := $(package)_$(version).tar.gz
 
@@ -9,30 +9,31 @@ LATEXMKFLAGS := -pdf -silent
 noweave := noweave
 notangle:= notangle
 
-Rnoweb := $(patsubst OOS/man/%.Rd,OOS/R/%.R,$(filter-out OOS/man/nobs-methods.Rd,$(wildcard OOS/man/*.Rd)))
+Rfiles := $(patsubst $(package)/man/%.Rd,$(package)/R/%.R,$(filter-out $(package)/man/nobs-methods.Rd,$(wildcard $(package)/man/*.Rd)))
 
-.PHONY: all build
+.PHONY: all build pdf
 
-all: check build install OOS/inst/doc/implementation.pdf
+all: check build install pdf
+pdf: $(package)/inst/doc/implementation.pdf
 build: $(zipfile)
-$(zipfile): Check 
+$(zipfile): check 
 	R CMD build $(package)
 
 install: $(zipfile)
 	R CMD INSTALL $(package)
 	touch $@
 
-$(Rfiles) OOS/NAMESPACE: OOS/noweb/implementation.rnw
-	mkdir -p OOS/R
+$(Rfiles) $(package)/NAMESPACE: $(package)/noweb/implementation.rnw
+	mkdir -p $(package)/R
 	$(notangle) -R$(@F) $< | cpif $@
 %.pdf: %.tex
-	cd $(dir $<) && $(latexmk) $(LATEXMKFLAGS) $<
-OOS/inst/doc/implementation.tex: OOS/noweb/implementation.rnw
-	mkdir -p OOS/inst/doc
+	cd $(dir $<) && $(latexmk) $(LATEXMKFLAGS) $(<F)
+$(package)/inst/doc/implementation.tex: $(package)/noweb/implementation.rnw
+	mkdir -p $(package)/inst/doc
 	$(noweave) -latex -x -delay $< | sed /^#/d | cpif $@
 
 # I like this next rule.  The 'check' file depends on every file that's
 # under version control or unknown in the $(package) subdirectory.
-check: $(Rfiles) OOS/NAMESPACE $(addprefix $(package)/,$(shell bzr ls $(package)/ -R --unknown -V --kind=file))
+check: $(Rfiles) $(package)/NAMESPACE $(addprefix $(package)/,$(shell bzr ls $(package)/ -R --unknown -V --kind=file))
 	R CMD check $(package)
 	touch $@
