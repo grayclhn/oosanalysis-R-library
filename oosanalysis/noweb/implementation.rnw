@@ -2,6 +2,7 @@
 \usepackage{noweb,setspace,amsmath,amsthm,amssymb,microtype,eco}
 \usepackage[round]{natbib}
 \usepackage[margin = 1in]{geometry}
+\DisableLigatures{family=tt*}
 \frenchspacing
 \bibliographystyle{abbrvnat}
 
@@ -11,6 +12,7 @@
 \let\nwdocspar=\par
 \noweboptions{longxref}
 
+\newcommand{\mds}{\textsc{mds}}
 \newcommand{\oos}{\textsc{oos}}
 
 \renewcommand{\Re}{\ensuremath{\mathbb{R}}}
@@ -54,11 +56,11 @@ The arguments for [[dmw.calculation]] are, using notation from
 <<dmw.R>>=
 dmw.calculation <- function(f, h, BF, R, vcv, 
                             window = c("recursive", "rolling", "fixed")) {
-  lambda <- dmw.lambda(length(f) / R, window)
+  lambda <- dmw.lambda(pi = length(f)/R, window)
   hBF <- tcrossprod(as.matrix(h), BF)
   S <- vcv(cbind(f, hBF))
-  return(list(mu = mean(f), sd = sqrt(S[1,1] + 
-                              lambda$fh * (S[1,2] + S[2,1]) + lambda$hh * S[2,2])))
+  return(list(mu = mean(f), sd = sqrt(S[1,1] + lambda$fh * (S[1,2] + S[2,1]) 
+                                      + lambda$hh * S[2,2])))
 }
 @ 
 
@@ -70,7 +72,7 @@ f$.  \citet{Wes:96} derives the formula for the recursive window and
 dmw.lambda <- function(pi, window = c("recursive", "rolling", "fixed")) {
   window <- match.arg(window)
   if (window == "recursive") {
-    lambda.fh <- 1 - log(1 + pi) / pi
+    lambda.fh <- 1 - log(1 + pi)/pi
     lambda.hh <- 2 * lambda.fh
   } else if (window == "fixed") {
     lambda.fh <- 0
@@ -79,7 +81,7 @@ dmw.lambda <- function(pi, window = c("recursive", "rolling", "fixed")) {
     lambda.fh <- pi/2
     lambda.hh <- pi - pi^2 / 3
   } else if (window == "rolling" && pi > 1) {
-    lambda.fh <- 1 - 1 / (2 * pi)
+    lambda.fh <- 1 - 1/(2*pi)
     lambda.hh <- pi
   }
   return(list(fh = lambda.fh, hh = lambda.hh))
@@ -87,6 +89,23 @@ dmw.lambda <- function(pi, window = c("recursive", "rolling", "fixed")) {
 @ 
 
 \subsection{Clark and West test statistic}
+The next statisic is developed in \citet{ClW:06,ClW:07}.  They build
+on \citet{Giw:06} by proposing a fixed-length rolling window to get an
+asymptotically normal statistic, but add a correction to the \oos\
+average so that it's centered correctly for testing the null that the
+benchmark is an \mds.  I implement it as two functions.  One to
+estimate the \oos\ forecasts for given data and models.  And one to
+construct the statistic.
+
+<<clarkwest.R>>=
+clarkwest <- function(dataset, null, alt, R,
+                      window = c("rolling", "recursive", "fixed"), vcv = var) {
+  clarkwest.calculation(
+    target        = yfn(dataset)[(R+1):nrow(dataset)],
+    null.forecast = apply.oos(R, dataset, null, window, "forecast"),
+    alt.forecast  = apply.oos(R, dataset, alt,  window, "forecast"))
+}
+@ 
 
 <<clarkwest.R>>=
 clarkwest.calculation <- function(target, null.forecast, alt.forecast) {
@@ -94,7 +113,9 @@ clarkwest.calculation <- function(target, null.forecast, alt.forecast) {
   oos.sequence <- ((target - null.forecast)^2 - 
                    (target - alt.forecast)^2 + 
                    (null.forecast - alt.forecast)^2)
-  return(list(mu = mean(oos.sequence), sd = sd(oos.sequence)))
+  mu <- mean(oos.sequence)
+  sd <- sd(oos.sequence)
+  return(list(mu = mu, sd = sd, pvalue = pnorm(mu, 0, sd, FALSE)))
 }
 @ 
 
@@ -104,24 +125,26 @@ This subsection implements the statistic proposed by \citet{Cal:11b}.
 This statistic uses a recursive window for the benchmark and a
 fixed-length rolling or fixed window for the alternative.
 <<mixedwindow.R>>=
-mixedwindow <- function(d, R, null, alt, xfn, yfn, 
-                        window = c("fixed", "rolling"), vcv = var) {
+mixedwindow <- function(dataset, null, alt, xfn, yfn, R, 
+                        window = c("rolling", "fixed"), vcv = var) {
   window <- match.arg(window)
-  n <- nrow(d)
+  n <- nrow(dataset)
   oos <- (R+1):n
 
-  X <- xfn(d)
-  y <- yfn(d)
-  pnull <- apply.oos(R, d, null, "recursive", "forecast")
-  palt  <- apply.oos(R, d, alt, window, "forecast")
+  X <- xfn(dataset)
+  y <- yfn(dataset)
+  pnull <- apply.oos(R, dataset, null, "recursive", "forecast")
+  palt  <- apply.oos(R, dataset, alt, window, "forecast")
   enull <- y[oos] - pnull
   pdiff <- pnull - palt
   
-  dmw.calculation(f  = enull^2 - (y[oos] - palt)^2 + pdiff^2,
-                  h  = enull * X[oos,,drop=FALSE],
-                  BF = 2 * solve(crossprod(X)/n, 
-                    colMeans((pdiff - enull) * X[oos,,drop=FALSE])),
-                  R, vcv, window = "recursive")
+  estimates <- dmw.calculation(f  = enull^2 - (y[oos] - palt)^2 + pdiff^2,
+                               h  = enull * X[oos,,drop=FALSE],
+                               BF = 2 * solve(crossprod(X) / n, 
+                                 colMeans((pdiff - enull) * X[oos,,drop=FALSE])),
+                               R, vcv, window = "recursive")
+  estimates$pvalue <- with(estimates, pnorm(mu, 0, sd, FALSE))
+  return(estimates)
 }
 @ 
 
@@ -238,69 +261,176 @@ calboot <- function(d, R, null, palt, yfn, xfn, b, nboot) {
 
 \section{Functions to produce out-of-sample forecasts and errors}
 
+\subsection{Definition of [[forecast.error]]}
+
+The function [[forecast.error]] is analagous to [[predict]], except it
+returns the prediction errors instead of the predictions.  Its
+arguments are
+\begin{itemize}
+\item[{}[[object]]:] Any object that has [[terms]] and [[predict]] methods.
+\item[{}[[newdata]]:] A data frame that contains the new observations
+  to forecast.
+\end{itemize}
+
 <<forecast.error.R>>=
 forecast.error <- function(object, newdata,...) {
-  if (missing(newdata) || is.null(newdata)) {
-    stop("must supply 'newdata'")
-  }
-  ## If 'newdata' is a ts object, we need to make sure that dynamic
-  ## models don't mess up the indexing
-  tt <- terms(object)
-  Y.new <- model.response(model.frame(tt, newdata))
-  if (is.ts(newdata)) {
-    Y.new <- ts(Y.new, start = start(newdata),
-                frequency = frequency(newdata))
-  }
-  Y.hat <- predict(object, newdata,...)
-  unname(Y.new - Y.hat)
+  <<check [[forecast.error]] arguments>>
+  <<extract the [[predictand]] from [[newdata]]>>
+  forecasts <- unname(predict(object, newdata,...))
+  return(predictand - forecasts)
 }
-@
+@ Right now I just do trivial consistency checking, but I might add
+more later.
+<<check [[forecast.error]] arguments>>=
+if (missing(newdata) || is.null(newdata)) {
+  stop("must supply 'newdata'")
+}
+@ The next bit of code uses the estimated model to determine which
+variable is the predictand and then extracts the new values from the
+data frame [[newdata]].  There's a complication with time series
+objects, the time index gets discarded, so I explicitly assign the
+time index if it's needed.
+<<extract the [[predictand]] from [[newdata]]>>=
+tt <- terms(object)
+predictand <- model.response(model.frame(tt, newdata))
+if (is.ts(newdata)) {
+  predictand <- ts(predictand, start = start(newdata),
+                   frequency = frequency(newdata))
+}
+@ 
+
+\subsection{Definition of [[apply.oos]]}
 
 <<apply.oos.R>>=
 apply.oos <- function(R, d, model,
                       window = c("rolling", "recursive", "fixed"),
                       ret = c("forecast", "error"),...) {
-  window <- match.arg(window)
-  ret <- match.arg(ret)
-  n <- nobs(d)
-  d <- as.ts(d)
-  p <- time(d)
-  predfn <- switch(ret, forecast = predict, error = forecast.error)
-  ## note that in all of the switch statements, we're going to let
-  ## 'newdata' include the training sample, and then just take the
-  ## last forecast or forecast error.  This is so that dynamic models
-  ## can get their regressors from the training sample.  For the same
-  ## reason, we make everything a time series and use windows, instead
-  ## of subsetting (for some reason, time series objects lose their
-  ## time series properties after subsetting, which is kind of
-  ## annoying).
-  ## 
-  ## Note that the "predict" methods are kind of crappy, in that they
-  ## return a vector of the same length as "newdata" has observations,
-  ## even when some of the observations are lost to lag strucutre,
-  ## etc.
-  ##
-  ## As you can imagine, this code is *extremely* slow.
-  lastPred <- function(startEst, endEst, s,
-                       m = model(window(d, start = p[startEst], end = p[endEst]),
-                         ...),...) {
-    predictions <- predfn(m, newdata = window(d, start = p[startEst], end = p[s]))
-    if (is.ts(predictions)) {
-      window(predictions, start = p[s], end = p[s])
-    } else {
-      tail(predictions, 1)
-    }
-  }
-  
-  ts(unname(switch(window,
-                   recursive = sapply((R+1):n, function(s) lastPred(1, s-1, s,...)),
-                   rolling =   sapply((R+1):n, function(s) lastPred(s-R, s-1, s,...)),
-                   fixed = {
-                     m <- model(window(d, end = p[R]),...)
-                     sapply((R+1):n, function(s) lastPred(1, R, s, m))
-                   })), end = end(d), frequency = frequency(d))
+  <<set up local variables for [[apply.oos]]>>
+  <<define some sort of function>>
+  <<do everything at once and return it>>
 }
 @
+
+<<set up local variables for [[apply.oos]]>>=
+window <- match.arg(window)
+ret <- match.arg(ret)
+n <- nobs(d)
+d <- as.ts(d)
+p <- time(d)
+predfn <- switch(ret, forecast = predict, error = forecast.error)
+@ 
+
+My original comments for the next section are:
+\begin{quote}
+note that in all of the switch statements, we're going to let
+'newdata' include the training sample, and then just take the
+last forecast or forecast error.  This is so that dynamic models
+can get their regressors from the training sample.  For the same
+reason, we make everything a time series and use windows, instead
+of subsetting (for some reason, time series objects lose their
+time series properties after subsetting, which is kind of
+annoying).
+ 
+Note that the "predict" methods are kind of crappy, in that they
+return a vector of the same length as "newdata" has observations,
+even when some of the observations are lost to lag strucutre,
+etc.
+
+As you can imagine, this code is *extremely* slow.
+\end{quote}
+I'm not sure what it actually does.
+<<define some sort of function>>=
+lastPred <- function(startEst, endEst, s, m = model(window(d, 
+                       start = p[startEst], end = p[endEst]),...),...) {
+  predictions <- 
+    predfn(m, newdata = window(d, start = p[startEst], end = p[s]))
+  if (is.ts(predictions)) {
+    window(predictions, start = p[s], end = p[s])
+  } else {
+    tail(predictions, 1)
+  }
+}
+@
+
+<<do everything at once and return it>>=
+return(ts(unname(switch(window,
+  recursive = sapply((R+1):n, function(s) lastPred(1, s-1, s,...)),
+  rolling =   sapply((R+1):n, function(s) lastPred(s-R, s-1, s,...)),
+  fixed = {
+    m <- model(window(d, end = p[R]),...)
+    sapply((R+1):n, function(s) lastPred(1, R, s, m))
+  })), end = end(d), frequency = frequency(d)))
+@
+
+\section{DGPs}
+
+The processes are $y_t = a * c(1, z_{t-1}) + e1$ $z_t = b * c(1,
+z_{t-1}) + e2$ with $(e1, e2) \sim N(0, v)$
+<<datageneration.R>>=
+### -*- mode: R-mode -*-
+generate.data.mc1 <- function(n, isPower) {
+  if (!isPower) {
+    gam <- rep(0, n)
+  } else if (isPower == 1) {
+    gam <- rep(0.35, n)
+  } else {
+    n1 <- floor(n/2)
+    gam <- c(rep(0, n1), rep(.7, n - n1))
+  }
+  a0 <- .5
+  b <- c(.15, .95)
+  v <- matrix(c(18, -.5, -.5, .025), 2)
+  
+  Ez <- b[1] / (1 - b[2])
+  Ey <- a0 + gam[1] * Ez
+
+  ## elements of the variance-covariance matrix
+  Vz <- v[2,2] / (1 - b[2]^2)
+  Vy <- v[1,1] + gam[1]^2 * Vz
+  Cyz <- gam[1] * b[2] * Vz + v[1,2]
+
+  ## we're going to let x_t = (y_t, z_t); draw from the stationary
+  ## distribution and then populate the rest of the matrix with the
+  ## innovations.
+  x <- rbind(mvrnorm(1, c(Ey, Ez), matrix(c(Vy, Cyz, Cyz, Vz), 2)),
+             mvrnorm(n, c(0,0), v))
+  for (i in 1 + (1:n)) {
+    A <- matrix(c(0, 0, gam[i-1], b[2]), 2)
+    x[i,] = drop(c(a0, b[1]) + A %*% x[i-1,] + x[i,])
+  }
+  data.frame(y = x[-1,1], zlag = x[-n,2])
+}
+@
+
+
+<<datageneration.R>>=
+### -*- mode: R-mode -*-
+generate.data.mc2 <- function(n, isPower, nburn = 1600) {
+  ## The processes are
+  ## y_t = a %*% c(1, y_{t-1}, z_{t-1},...,z_{t-4}) + e1
+  ## z_t = b %*% c(z_{t-1},...,z_{t-4}) + e2
+  ## with 
+  ## (e1, e2) ~ N(0, v)
+  a <- c(2.237, 0.261, isPower * c(3.363, -0.633, -0.377, -0.529))
+  b <- c(0, 0, 0.804, -0.221, 0.226, -0.205)
+  v <- matrix(c(10.505, 1.036, 1.036, 0.366), 2)
+
+  ntot <- n + nburn
+  ret <- nburn + (5:n)
+  ## we're going to let x_t = (y_t, z_t); draw from the stationary
+  ## distribution and then populate the rest of the matrix with the
+  ## innovations.
+  x <- mvrnorm(ntot, c(0,0), v)
+  A <- rbind(a, b)
+  for (i in 5:ntot) {
+    x[i,] = c(A %*% c(1, x[i-1,], x[i - (2:4),2]) + x[i,])
+  }
+  
+  data.frame(y = x[ret, 1], y1 = x[ret-1,1], z1 = x[ret-1, 2],
+             z2 = x[ret-2, 2], z3 = x[ret-3, 2], z4 = x[ret-4, 2])
+}
+@
+
 
 \section{Utility functions}
 <<lagmatrix.R>>=
@@ -453,11 +583,31 @@ dFull <- function(data1, data2) {
 }
 @ 
 
+\appendix
+
 \section{Namespace}
 <<NAMESPACE>>=
 export(apply.oos, forecast.error, dmw.calculation, clarkwest.calculation,
        mixedwindow)
 @
+
+\section{Licensing information for this software}
+
+Copyright \textcopyright\ 2011 Gray Calhoun
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or (at
+your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+\texttt{<http://www.gnu.org/licenses/>}.
 
 \bibliography{AllRefs}
 \end{document}
