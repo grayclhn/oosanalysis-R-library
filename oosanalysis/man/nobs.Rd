@@ -19,7 +19,7 @@
 \seealso{\code{\link{nobs-methods}}}
 
 \examples{
-d <- data.frame(x = 1:10, y = 1:10)
-nobs(d)
+## d <- data.frame(x = 1:10, y = 1:10)
+## nobs(d)
 }
 

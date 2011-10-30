@@ -31,7 +31,9 @@
 
 \begin{document}
 
-\title{Implementation details: oosanalysis package}
+\title{Implementation details: oosanalysis package\footnote{Copyright
+    \textcopyright\ 2011 Gray Calhoun}} 
+
 \author{Gray Calhoun\\Iowa State University} \date{\today}
 
 \maketitle
@@ -57,7 +59,7 @@ The arguments for [[dmw.calculation]] are, using notation from
 dmw.calculation <- function(f, h, BF, R, vcv, 
                             window = c("recursive", "rolling", "fixed")) {
   lambda <- dmw.lambda(pi = length(f)/R, window)
-  hBF <- tcrossprod(as.matrix(h), BF)
+  hBF <- tcrossprod(as.matrix(h), matrix(BF, nrow = 1))
   S <- vcv(cbind(f, hBF))
   return(list(mu = mean(f), sd = sqrt(S[1,1] + lambda$fh * (S[1,2] + S[2,1]) 
                                       + lambda$hh * S[2,2])))
@@ -133,13 +135,15 @@ mixedwindow <- function(dataset, null, alt, xfn, yfn, R,
 
   X <- xfn(dataset)
   y <- yfn(dataset)
-  pnull <- apply.oos(R, dataset, null, "recursive", "forecast")
-  palt  <- apply.oos(R, dataset, alt, window, "forecast")
+  pnull <- as.vector(apply.oos(R, dataset, null, "recursive", "forecast"))
+  palt  <- as.vector(apply.oos(R, dataset, alt, window, "forecast"))
   enull <- y[oos] - pnull
   pdiff <- pnull - palt
-  
+@ After calculating all of the forecasts, we use the \dmw\ function to
+actually put together the statistic.  
+<<mixedwindow.R>>=
   estimates <- dmw.calculation(f  = enull^2 - (y[oos] - palt)^2 + pdiff^2,
-                               h  = enull * X[oos,,drop=FALSE],
+                               h  = as.vector(enull) * X[oos,,drop=FALSE],
                                BF = 2 * solve(crossprod(X) / n, 
                                  colMeans((pdiff - enull) * X[oos,,drop=FALSE])),
                                R, vcv, window = "recursive")
@@ -587,13 +591,11 @@ dFull <- function(data1, data2) {
 
 \section{Namespace}
 <<NAMESPACE>>=
-export(apply.oos, forecast.error, dmw.calculation, clarkwest.calculation,
-       mixedwindow)
+export(clarkwest, mixedwindow, generate.data.mc1, generate.data.mc2,
+       apply.oos, forecast.error)
 @
 
 \section{Licensing information for this software}
-
-Copyright \textcopyright\ 2011 Gray Calhoun
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
