@@ -1,77 +1,92 @@
 \name{dmw}
 \alias{dmw}
 \alias{dmw.calculation}
-%- Also NEED an '\alias' for EACH other topic documented here.
 \title{Diebold-Mariano-West out-of-sample t-test}
-\description{
-%%  ~~ A concise (1-5 lines) description of what the function does. ~~
-}
+
+\description{The Diebold-Mariano-West \acronym{oos} t-test can be used
+    to compare population forecasting models under some fairly
+    restrictive circumstances (see West, 2006).  The forecast are
+    assumed to be constructed using a fixed, recursive, or rolling
+    estimation window and depend on the estimated coefficients
+    \eqn{\hat\beta_t}.  The function \code{dmw.calculation} takes as
+    arguments the matrices and vectors that West (1996) and West and
+    McCracken (1998) use to represent the asymptotic distribution of
+    this statistic and just assembles the mean and variance components
+    of the statistic.}
+
+
 \usage{
-dmw.calculation(f, h, BF, R, vcv, window = c("recursive", "rolling", "fixed"))
-dmw.lambda(pi, window = c("recursive", "rolling", "fixed"))
+dmw.calculation(f, h, R, vcv, tBtF = NULL,
+                window = c("recursive", "rolling", "fixed"))
 }
-%- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{f}{
-%%     ~~Describe \code{f} here~~
+  \item{f}{A vector containing the \acronym{oos} observations}
+
+  \item{h}{A matrix containing something like (for \acronym{ols} using
+  the obvious notation) \eqn{x_t \varepsilon_t} for \eqn{t} ranging over
+  the \acronym{oos} period.}
+
+  \item{R}{The number of observations in the training sample.}
+
+  \item{vcv}{A function to calculate asymptotic variance of \eqn{(\bar
+      f^*, \bar h^*)}, the \acronym{oos} sequences evaluated at the true
+      parameter values.}
+
+  \item{tBtF}{A vector that represents \eqn{B'F'} in West's (1996)
+    notation.  This term captures the uncertainty introduced by
+    estimating the unknown model coefficients; if the coefficients are
+    known or imposed, instead of estimated, set this argument to
+    \code{NULL}}
+
+  \item{window}{A character string indicating which window strategy was
+    used to generate the \acronym{oos} observations.}
 }
-  \item{h}{
-%%     ~~Describe \code{h} here~~
+
+\value{A list containing the following elements:
+  \item{mu}{The \acronym{oos} average,}
+  \item{avar}{The asymptotic variance of the \acronym{oos} average.}
 }
-  \item{BF}{
-%%     ~~Describe \code{BF} here~~
-}
-  \item{R}{
-%%     ~~Describe \code{R} here~~
-}
-  \item{vcv}{
-%%     ~~Describe \code{vcv} here~~
-}
-  \item{window}{
-%%     ~~Describe \code{window} here~~
-}
-}
-\details{
-%%  ~~ If necessary, more details than the description above ~~
-}
-\value{
-%%  ~Describe the value returned
-%%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
-%% ...
-}
+
 \references{
-%% ~put references to the literature/web site here ~
-}
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
-}
 
-%% ~Make other sections like Warning with \section{Warning }{....} ~
+Diebold, F. X. and Mariano, R. S. 1995, Comparing predictive accuracy.
+\emph{Journal of Business and Economic Statistics}, \bold{138}(1):
+253--263.
+  
+West, K. D. 1996, Asymptotic inference about predictive ability.
+\emph{Econometrica}, \bold{64}(5): 1067--1084.
 
-\seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
+
+West, K. D. 2006, Forecast evaluation, in G. Elliott, C. Granger, and
+A. Timmermann, editors, \emph{Handbook of Economic Forecasting}, volume
+1, pages 99--134. Elsevier.
+
+West, K. D. 1998, Regression-based tests of predicitve ability.
+\emph{International Economic Review}, \bold{39}(4):817--840.
 }
+\author{Gray Calhoun}
+
+\seealso{\code{\link{mixedwindow}}, \code{\link{clarkwest}}}
 \examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
+x <- rnorm(100)
+d <- data.frame(y = x + rnorm(100), x = x)
+R <- 70
+oos <- 71:100
 
-## The function is currently defined as
-function(f, h, BF, R, vcv, 
-                            window = c("recursive", "rolling", "fixed")) {
-  lambda <- dmw.lambda(pi = length(f)/R, window)
-  hBF <- tcrossprod(as.matrix(h), BF)
-  S <- vcv(cbind(f, hBF))
-  return(list(mu = mean(f), sd = sqrt(S[1,1] + lambda$fh * (S[1,2] + S[2,1]) 
-                                      + lambda$hh * S[2,2])))
-  }
+error.model1 <- d$y[oos] - predict(lm(y ~ 1, data = d[-oos,]),
+                                   newdata = d[oos,])
+error.model2 <- d$y[oos] - predict(lm(y ~ x, data = d[-oos,]),
+                                   newdata = d[oos,])
+# test that the two models have equal population MSE.  Note that F = 0
+# in this setting.
+estimates <-
+  dmw.calculation(error.model1^2 - error.model2^2,
+                  cbind(error.model1, error.model2, error.model2 * x),
+                  R = R, vcv = var)
+# calculate p-value for a one-sided test
+pnorm(estimates$mu * sqrt(length(oos) / estimates$avar))
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line
+
+\keyword{ts}
+\keyword{htest}
+\keyword{models}

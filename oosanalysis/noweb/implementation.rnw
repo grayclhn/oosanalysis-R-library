@@ -5,6 +5,7 @@
 \DisableLigatures{family=tt*}
 \frenchspacing
 \bibliographystyle{abbrvnat}
+\newcommand\citepos[2][]{\citeauthor{#2}'s \citeyearpar[#1]{#2}}
 
 % These next two lines make latex more willing to break code chunks
 % across pages:
@@ -12,6 +13,8 @@
 \let\nwdocspar=\par
 \noweboptions{longxref}
 
+\newcommand{\dmw}{\textsc{dmw}}
+\newcommand{\gnu}{\textsc{gnu}}
 \newcommand{\mds}{\textsc{mds}}
 \newcommand{\oos}{\textsc{oos}}
 
@@ -31,8 +34,8 @@
 
 \begin{document}
 
-\title{Implementation details: oosanalysis package\footnote{Copyright
-    \textcopyright\ 2011 Gray Calhoun}} 
+\title{Implementation details: `oosanalysis'
+  package\footnote{Copyright \textcopyright\ 2011 by Gray Calhoun}}
 
 \author{Gray Calhoun\\Iowa State University} \date{\today}
 
@@ -45,24 +48,48 @@ This section describes the code for the actual test statistics.
 
 \subsection{Diebold-Mariano-West test statistic}
 Probably the most important of the \oos\ statistics is the
-Diebold-Mariano-West test \citep{DiM:95,Wes:96}.  I implement
-their statistic in two stages.  The first function does the
-calculation and the second extracts the necessary processes and
-matrics from the data set.
+Diebold-Mariano-West test \citep{DiM:95,Wes:96}.  For now, I've just
+written up a bare-bones version of the statistic that requires the
+user to explictly calculate \citepos{Wes:96} variables and pass them
+to the function.  It would be convenient to write another function
+that takes higher-level arguments, but I'm not sure that there's a
+good general way to do that.  The function [[mixedwindow]] does
+provide a higher-level function that then calls this function, so it
+might be a good template if one wants to code up others.
 
-The arguments for [[dmw.calculation]] are, using notation from
-\citet{Wes:96},
-\begin{itemize}
-\item [[f]] a vector of the actual \oos\ sequence
-\end{itemize}
+The function [[dmw.calculation]] estimates the mean and variance of
+the \oos\ process $f_{t}(\beta)$.  In \citet{WeM:98}, the recursive
+window coefficient estimator can be written in the form
+\begin{equation}
+  \label{eq:1}
+  \hat{\beta}_{t} = B_{t} \tfrac{1}{T} \sum_{s=1}^{t}
+  h_{t}.\footnote{The notation for the recursive window is slightly
+    different than \citet{Wes:96} uses.}
+\end{equation}
+Changing the formula for the fixed and rolling window estimators is
+straightforward.  The asymptotic variance of the \oos\ average is
+\begin{equation}
+  \label{eq:2}
+  S_{ff} + (S_{fh} B' F' + F B S_{fh}') \lambda_{fh} + \lambda_{hh}
+  F B S_{hh} B' F'
+\end{equation}
+where $B = \plim B_{t}$, $F = \E \tfrac{\partial}{\partial \beta}
+f_{t}(\beta)$, $S$ is the long-run variance of $(f_{t}, h_{t})$, and
+$\lambda$ is a vector of scale factors that depend on the window used.
+
 <<dmw.R>>=
-dmw.calculation <- function(f, h, BF, R, vcv, 
+dmw.calculation <- function(f, h, R, vcv, tBtF = NULL, 
                             window = c("recursive", "rolling", "fixed")) {
-  lambda <- dmw.lambda(pi = length(f)/R, window)
-  hBF <- tcrossprod(as.matrix(h), matrix(BF, nrow = 1))
-  S <- vcv(cbind(f, hBF))
-  return(list(mu = mean(f), sd = sqrt(S[1,1] + lambda$fh * (S[1,2] + S[2,1]) 
-                                      + lambda$hh * S[2,2])))
+  noos <- length(f)
+  lambda <- dmw.lambda(pi = noos / R, window)
+  htBtF <- if (is.null(tBtF)) {
+    rep(0, noos) 
+  } else {
+    tcrossprod(as.matrix(h), matrix(tBtF, nrow = 1))
+  }
+  S <- vcv(cbind(f, htBtF))
+  return(list(mu = mean(f), avar = S[1,1] + lambda$fh * (S[1,2] + S[2,1]) 
+                                   + lambda$hh * S[2,2]))
 }
 @ 
 
@@ -84,7 +111,7 @@ dmw.lambda <- function(pi, window = c("recursive", "rolling", "fixed")) {
     lambda.hh <- pi - pi^2 / 3
   } else if (window == "rolling" && pi > 1) {
     lambda.fh <- 1 - 1/(2*pi)
-    lambda.hh <- pi
+    lambda.hh <- 1 - 1/(3*pi)
   }
   return(list(fh = lambda.fh, hh = lambda.hh))
 }
@@ -100,7 +127,7 @@ estimate the \oos\ forecasts for given data and models.  And one to
 construct the statistic.
 
 <<clarkwest.R>>=
-clarkwest <- function(dataset, null, alt, R,
+clarkwest <- function(dataset, null, alt, R, yfn,
                       window = c("rolling", "recursive", "fixed"), vcv = var) {
   clarkwest.calculation(
     target        = yfn(dataset)[(R+1):nrow(dataset)],
@@ -112,12 +139,13 @@ clarkwest <- function(dataset, null, alt, R,
 <<clarkwest.R>>=
 clarkwest.calculation <- function(target, null.forecast, alt.forecast) {
   P <- length(target)
-  oos.sequence <- ((target - null.forecast)^2 - 
+  oos.sequence <- {(target - null.forecast)^2 - 
                    (target - alt.forecast)^2 + 
-                   (null.forecast - alt.forecast)^2)
+                   (null.forecast - alt.forecast)^2}
   mu <- mean(oos.sequence)
-  sd <- sd(oos.sequence)
-  return(list(mu = mu, sd = sd, pvalue = pnorm(mu, 0, sd, FALSE)))
+  avar <- var(oos.sequence)
+  return(list(mu = mu, avar = avar, 
+              pvalue = pnorm(sqrt(P) * mu, 0, sqrt(avar), FALSE)))
 }
 @ 
 
@@ -144,10 +172,10 @@ actually put together the statistic.
 <<mixedwindow.R>>=
   estimates <- dmw.calculation(f  = enull^2 - (y[oos] - palt)^2 + pdiff^2,
                                h  = as.vector(enull) * X[oos,,drop=FALSE],
-                               BF = 2 * solve(crossprod(X) / n, 
+                               tBtF = 2 * solve(crossprod(X) / n, 
                                  colMeans((pdiff - enull) * X[oos,,drop=FALSE])),
                                R, vcv, window = "recursive")
-  estimates$pvalue <- with(estimates, pnorm(mu, 0, sd, FALSE))
+  estimates$pvalue <- with(estimates, pnorm(sqrt(n-R) * mu, 0, sd, FALSE))
   return(estimates)
 }
 @ 
@@ -179,28 +207,30 @@ iboot <- function(n, b) {
 
 use the stepdown procedure to test multiple models
 <<mixedwindow.R>>=
-caltest <- function(d, R, null, palt, yfn, xfn = NULL,
-                    b, nboot, level = .05) {
+stepm.mixed <- function(d, R, null, palt, yfn, xfn,
+                        b, nboot, level = .05, vcv = var) {
   n <- nrow(d)
   oos <- (R+1):n
-  pnull <- apply.oos(R, d, null, "recursive", "forecast")
+  P <- length(oos)
+  y <- yfn(d)
+  X <- xfn(d)
+  B <- solve(crossprod(X)/n)
 
-  if (is.function(xfn)) {
-    X <- xfn(d)
-    B <- solve(crossprod(X)/n)
-    oosstats <- sapply(palt, function(a) {
-      stats <- calmain(d, R, pnull, a, yfn, xfn,
-                       crossprod(B, colMeans(X[oos,,drop=FALSE] * (pnull - a))))
-      stats[1] / stats[2]
-    })
-  } else {
-    oosstats <- sapply(palt, function(a) {
-      stats <- calmain(d, R, pnull, a, yfn)
-      stats[1] / stats[2]
-    })
-  }
+  pnull <- as.vector(apply.oos(R, d, null, "recursive", "forecast"))
+  enull <- y[oos] - pnull
+  h <- enull * X[oos,,drop=FALSE]
+
+  oosstats <- sapply(palt, function(a) {
+    pdiff <- pnull - a
+    f <- enull^2 - (y[oos] - a)^2 + pdiff^2
+    stats <-
+      dmw.calculation(f, h, tBtF = 2 * solve(crossprod(X) / n, 
+                              colMeans((pdiff - enull) * X[oos,,drop=FALSE])),
+                      R, vcv, window = "recursive")
+    stats$mu * sqrt(P / stats$avar)
+  })
   
-  boots <- as.matrix(calboot(d, R, null, palt, yfn, xfn, b, nboot),
+  boots <- as.matrix(calboot(d, R, null, palt, yfn, xfn, b, nboot, vcv),
                      nrow = nboot)
   ## do the stepdown procedure
   reject <- rep(FALSE, length(oosstats))
@@ -219,7 +249,7 @@ caltest <- function(d, R, null, palt, yfn, xfn = NULL,
 @ 
 
 <<mixedwindow.R>>=
-calboot <- function(d, R, null, palt, yfn, xfn, b, nboot) {
+calboot <- function(d, R, null, palt, yfn, xfn, b, nboot, vcv = var) {
   n <- nrow(d)
   oos <- (R+1):n
   P <- n-R
@@ -233,26 +263,27 @@ calboot <- function(d, R, null, palt, yfn, xfn, b, nboot) {
   ## get the location parameter for the bootstrap distribution.
   pnullFull <- predict(null(d))[oos]
   y <- yfn(d[oos,])
-  bootmean <- colMeans(c(y - pnullFull)^2 - (y - palt)^2 + (pnullFull - palt)^2)
+  bootmean <- colMeans(c(y - pnullFull)^2 - (y - palt)^2 +
+                       (pnullFull - palt)^2)
 
   ## generate mean and variance via stationary bootstrap
   bsims <- replicate(nboot, {
     dboot <- rbind(d[-oos,,drop=FALSE], d[R + iboot(P,b),])
-    pnull <- apply.oos(R, dboot, null, "recursive", "forecast")
-    if (is.function(xfn)) {
-      X <- xfn(dboot)
-      B <- solve(crossprod(X)/nrow(d))
-      sapply(names(palt), function(a) {
-        stats <- calmain(dboot, R, pnull, dboot[oos,a], yfn, xfn,
-                         crossprod(B, colMeans(X[oos,,drop=FALSE] * (pnull - dboot[oos,a]))))
-        (stats[1] - bootmean[a]) / stats[2]
-      })
-    } else {
-      sapply(names(palt), function(a) {
-        stats <- calmain(dboot, R, pnull, dboot[oos,a], yfn)
-        (stats[1] - bootmean[a]) / stats[2]
+    y <- yfn(dboot)
+    X <- xfn(dboot)
+    B <- solve(crossprod(X)/nrow(d))
+    pnull <- as.vector(apply.oos(R, dboot, null, "recursive", "forecast"))
+    enull <- y[oos] - pnull
+    h <- enull * X[oos,, drop = FALSE]
+    sapply(names(palt), function(a) {
+      stats <-
+        dmw.calculation(f = enull^2 - (y[oos] - palt[,a])^2 + (pnull - palt[,a])^2,
+                        h, tBtF = crossprod(B, colMeans((pnull - palt[,a] - enull) *
+                             X[oos,,drop=FALSE])), R, vcv,
+                        window = "recursive")
+      (stats$mu - bootmean[a]) * sqrt(P / stats$avar)
     })
-  }})
+  })
   if (is.matrix(bsims)) {
     bsims <- data.frame(t(bsims))
   } else {
@@ -592,22 +623,22 @@ dFull <- function(data1, data2) {
 \section{Namespace}
 <<NAMESPACE>>=
 export(clarkwest, mixedwindow, generate.data.mc1, generate.data.mc2,
-       apply.oos, forecast.error)
+       apply.oos, forecast.error, stepm.mixed, dmw.calculation)
 @
 
 \section{Licensing information for this software}
 
 This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
+it under the terms of the \gnu\ General Public License as published by
 the Free Software Foundation, either version 3 of the License, or (at
 your option) any later version.
 
 This program is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-General Public License for more details.
+\textsc{without any warranty}; without even the implied warranty of
+\textsc{merchantability} or \textsc{fitness for a particular purpose}.
+See the \gnu\ General Public License for more details.
 
-You should have received a copy of the GNU General Public License
+You should have received a copy of the \gnu\ General Public License
 along with this program.  If not, see
 \texttt{<http://www.gnu.org/licenses/>}.
 

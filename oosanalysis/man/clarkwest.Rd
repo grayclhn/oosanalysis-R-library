@@ -2,54 +2,47 @@
 \alias{clarkwest}
 \alias{clarkwest.calculation}
 \title{Clark and West's (2006, 2007) Out-of-Sample Test}
-\description{}
+\description{Builds their \acronym{oos} statistic}
 \usage{
-clarkwest(dataset, null, alt, R, window = c("rolling", "recursive", "fixed"), vcv = var)
+clarkwest(dataset, null, alt, R, yfn,
+          window = c("rolling", "recursive", "fixed"), vcv = var)
 clarkwest.calculation(target, null.forecast, alt.forecast)
 }
 \arguments{
-  \item{dataset}{
-%%     ~~Describe \code{dataset} here~~
+  \item{dataset}{}
+  \item{null}{}
+  \item{alt}{}
+  \item{R}{}
+  \item{yfn}{}
+  \item{window}{}
+  \item{vcv}{}
+  \item{target}{}
+  \item{null.forecast}{}
+  \item{alt.forecast}
 }
-  \item{null}{
-%%     ~~Describe \code{null} here~~
-}
-  \item{alt}{
-%%     ~~Describe \code{alt} here~~
-}
-  \item{R}{
-%%     ~~Describe \code{R} here~~
-}
-  \item{window}{
-%%     ~~Describe \code{window} here~~
-}
-  \item{vcv}{
-%%     ~~Describe \code{vcv} here~~
-}
-}
-\details{
-%%  ~~ If necessary, more details than the description above ~~
-}
-\value{
-%%  ~Describe the value returned
-%%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
-%% ...
+
+\value{Both functions return the same thing, a list with elements
+  \item{mu}{an estimate of the corrected \acronym{oos} mean,}
+  \item{avar}{the asymptotic variance of the corrected \acronym{oos}
+    average,}
+  \item{pvalue}{the p-value associate with the one-sided \acronym{oos}
+  test.}
 }
 \references{
-%% ~put references to the literature/web site here ~
-}
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
+Clark, T. E., West, K. D. 2006, Using out-of-sample mean squared
+  prediction errors to test the martingale difference hypothesis.
+  \emph{Journal of Econometrics}, \bold{135}(1): 155--186.
+
+Clark, T. E., West, K. D. 2007, Approximately normal tests for equal
+predictive accuracy in nested models.  \emph{Journal of Econometrics},
+\bold{138}(1): 291--311.
 }
 
-%% ~Make other sections like Warning with \section{Warning }{....} ~
+\author{Gray Calhoun}
 
-\seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
-}
+\seealso{\code{\link{dmw.calculation}}}
 \examples{}
+
+\keyword{ts}
+\keyword{htest}
+\keyword{models}
