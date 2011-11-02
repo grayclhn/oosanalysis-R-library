@@ -2,23 +2,32 @@
 \alias{clarkwest}
 \alias{clarkwest.calculation}
 \title{Clark and West's (2006, 2007) Out-of-Sample Test}
-\description{Builds their \acronym{oos} statistic}
+\description{Functions to calculate Clark and West's (2006, 2007)
+  approximately normal \acronym{oos} statistic.}
 \usage{
-clarkwest(dataset, null, alt, R, yfn,
-          window = c("rolling", "recursive", "fixed"), vcv = var)
-clarkwest.calculation(target, null.forecast, alt.forecast)
+clarkwest(null, alt, dataset, R, vcv = var,
+          window = c("rolling", "recursive", "fixed"))
+
+clarkwest.calculation(target, null.forecast, alt.forecast, vcv)
 }
 \arguments{
-  \item{dataset}{}
-  \item{null}{}
-  \item{alt}{}
-  \item{R}{}
-  \item{yfn}{}
-  \item{window}{}
-  \item{vcv}{}
-  \item{target}{}
-  \item{null.forecast}{}
-  \item{alt.forecast}{}
+  \item{null}{A function that takes a subset of the data \code{dataset}
+    as its argument and returns an object with a \code{predict} method.
+    This function generates the benchmark forecast.}
+  \item{alt}{A second function that takes a subset of the data \code{dataset}
+    as its argument and returns an object with a \code{predict} method.
+    This function generates the alternative forecast.}
+  \item{dataset}{A data frame.}
+  \item{R}{An integer, the size of the training sample.}
+  \item{vcv}{A function to calculate the asymptotic variance of the
+    \acronym{oos} average.}
+  \item{window}{A character that indicates the window strategy for
+    \acronym{oos} estimation.}
+  \item{target}{A vector containing the values of the predictand.}
+  \item{null.forecast}{A vector containing the values of the benchmark
+    forecast.} 
+  \item{alt.forecast}{A vector containing the values of the alternative
+    forecast.}
 }
 
 \value{Both functions return the same thing, a list with elements
@@ -28,7 +37,34 @@ clarkwest.calculation(target, null.forecast, alt.forecast)
   \item{pvalue}{the p-value associate with the one-sided \acronym{oos}
   test.}
 }
+
+\details{Both of these functions implement Clark and West's (2006, 2007)
+  "corrected" out-of-sample tests.  The idea behind their tests is that
+  using a fixed-length rolling window, as in Giacomini and White (2006),
+  ensures that the \acronym{oos} average is asymptotically normal.  In
+  Giacomini and White, though, the \acronym{oos} average is not centered
+  at the expected difference in the \acronym{mse} of the pseudo-true
+  forecasting models, so Clark and West introduce an adjustment so that
+  their statistic is centered correctly.  Be aware that Clark and West's
+  adjustment is provably correct for the fixed or rolling windows when
+  \code{R} is small \emph{and the benchmark model is not estimated},
+  though Clark and West's (2007) simulations indicate that it performs
+  well for estimated benchmarks for some \acronym{dgp}s.  See Calhoun
+  (2011) for an asymptotically normal \acronym{oos} statistic that
+  allows the benchmark to be estimated.  The function allows users to
+  choose the "recursive" estimation strategy because it is popular in
+  practice, but be careful.
+
+  \code{clarkwest.calculation} does all of the algebra and
+  \code{clarkwest} is a convenient interface to it that calculates the
+  forecasts automatically.
+}
+
 \references{
+
+  Calhoun, G. 2011, An asymptotically normal out-of-sample test of equal
+  predictive accuracy for nested models.  Unpublished manuscript.
+
   Calhoun, G. 2011, Documentation appendix: An asymptotically normal
   out-of-sample test of equal predictive accuracy for nested models.
   Unpublished manuscript.
@@ -43,11 +79,19 @@ clarkwest.calculation(target, null.forecast, alt.forecast)
 
 }
 
-\author{Gray Calhoun <galhoun@iastate.edu>}
+\author{Gray Calhoun \email{galhoun@iastate.edu}}
 
-\seealso{\code{\link{dmw.calculation}}, \code{\link{mixedwindow}}}
+\seealso{\code{\link{dmw.calculation}}, \code{\link{mixedwindow}},
+  \code{\link{recursive.forecasts}}, \code{\link{predict}}}
 \examples{
-## do something
+x <- rnorm(100)
+d <- data.frame(y = x + rnorm(100), x = x)
+R <- 70
+
+model1 <- function(d) lm(y ~ 1, data = d)
+model2 <- function(d) lm(y ~ x, data = d)
+
+clarkwest(model1, model2, d, R, window = "rolling")
 }
 
 \keyword{ts}

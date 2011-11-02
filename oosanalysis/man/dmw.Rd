@@ -1,5 +1,4 @@
-\name{dmw}
-\alias{dmw}
+\name{dmw.calculation}
 \alias{dmw.calculation}
 \title{Diebold-Mariano-West out-of-sample t-test}
 
@@ -70,9 +69,10 @@ dmw.calculation(f, h, R, vcv, tBtF = NULL,
 
 }
 
-\author{Gray Calhoun <gcalhoun@iastate.edu>}
+\author{Gray Calhoun \email{gcalhoun@iastate.edu}}
 
-\seealso{\code{\link{mixedwindow}}, \code{\link{clarkwest}}}
+\seealso{\code{\link{mixedwindow}}, \code{\link{clarkwest}},
+  \code{\link{recursive.forecasts}}, \code{\link{predict}}} 
 \examples{
 x <- rnorm(100)
 d <- data.frame(y = x + rnorm(100), x = x)

@@ -1,5 +1,6 @@
-\documentclass[11pt]{article}
-\usepackage{noweb,setspace,amsmath,amsthm,amssymb,microtype,eco,lmodern}
+\documentclass[11pt,draft]{article}
+\usepackage{noweb,setspace,amsmath,amsthm,amssymb,microtype,eco}
+\usepackage[T1]{fontenc}
 \usepackage[round]{natbib}
 \usepackage[margin = 1in]{geometry}
 \DisableLigatures{family=tt*}
@@ -42,7 +43,7 @@
 \maketitle
 \tableofcontents
 
-\section{Test statistics for a pair of comparisons}
+\section{Out-of-sample comparisons}
 
 This section describes the code for the actual test statistics.
 
@@ -117,7 +118,7 @@ dmw.lambda <- function(pi, window = c("recursive", "rolling", "fixed")) {
 }
 @ 
 
-\subsection{Clark and West test statistic}
+\subsection{Clark and West (2006, 2007) test statistic}
 The next statisic is developed in \citet{ClW:06,ClW:07}.  They build
 on \citet{Giw:06} by proposing a fixed-length rolling window to get an
 asymptotically normal statistic, but add a correction to the \oos\
@@ -128,28 +129,29 @@ construct the statistic.
 
 <<clarkwest.R>>=
 clarkwest <- function(null, alt, dataset, R, vcv = var,
-                      window = c("rolling", "recursive", "fixed")) {
+                      window = c("rolling", "recursive", "fixed"))
   clarkwest.calculation(
     target        = extract.target(null, dataset),
     null.forecast = recursive.forecasts(null, dataset, R, window),
-    alt.forecast  = recursive.forecasts(alt, dataset, R, window))
-}
+    alt.forecast  = recursive.forecasts(alt, dataset, R, window),
+    vcv)
 @ 
 
 <<clarkwest.R>>=
-clarkwest.calculation <- function(target, null.forecast, alt.forecast) {
+clarkwest.calculation <- function(target, null.forecast, 
+                                  alt.forecast, vcv) {
   P <- length(target)
   oos.sequence <- {(target - null.forecast)^2 - 
                    (target - alt.forecast)^2 + 
                    (null.forecast - alt.forecast)^2}
   mu <- mean(oos.sequence)
-  avar <- var(oos.sequence)
+  avar <- vcv(oos.sequence)
   return(list(mu = mu, avar = avar, 
               pvalue = pnorm(sqrt(P) * mu, 0, sqrt(avar), FALSE)))
 }
 @ 
 
-\subsection{Mixed window test statistic}
+\subsection{Mixed window test statistics}
 
 This subsection implements the statistic proposed by \citet{Cal:11b}.
 This statistic uses a recursive window for the benchmark and a
@@ -164,8 +166,10 @@ mixedwindow <- function(null, alt, dataset, R, vcv = var,
     mixedwindow.calculation(y = extract.target(null, dataset),
                             X = extract.predictors(null, dataset),
                             recursive.forecasts(null, dataset, R, "recursive"),
-                            recursive.forecasts(alt, dataset, R, window))
-  estimates$pvalue <- with(estimates, pnorm(mu, 0, sqrt(avar / (nobs - R)), FALSE))
+                            recursive.forecasts(alt, dataset, R, window),
+                            vcv = vcv)
+  estimates$pvalue <-
+    with(estimates, pnorm(mu, 0, sqrt(avar / (nobs - R)), FALSE))
   return(estimates)
 }
 @ [[mixedwindow.calculation]] constructs the \oos\ processes and then
@@ -185,31 +189,37 @@ mixedwindow.calculation <- function(y, X, forecasts.null, forecasts.alt, vcv) {
   forecast.differences <- forecasts.null - forecasts.alt
   dmw.calculation(f = errors.null^2 - errors.alt^2 + forecast.differences^2,
                   h = errors.null * X[oos,,drop = FALSE],
+                  R = nobs - noos, vcv = vcv,
                   tBtF = 2 * solve(crossprod(X) / nobs, 
                            colMeans((forecast.differences -
                                      errors.null) * X[oos,,drop=FALSE])),
-                  nobs - noos, vcv, window = "recursive")
+                  window = "recursive")
 }
 @
 
+The [[mixedbootstrap]] function uses [[mixedwindow.calculation]] to
+implement \citepos{Cal:11b} bootstrap.  I implement the bootstrap by
+generating random indices rather than actually randomizing the data,
+since we have several distinct sequences that we need to bootstrap
+jointly (I assume that this is the usual way people do it).  The local
+function [[rbootindex]] takes no arguments, but is defined to generate
+a length [[nobs]] vector with blocks of length [[blocklength]] that
+induces the moving blocks \citep{Kun:89,LiS:92} or circular blocks
+\citep{PoR:92} bootstraps.  The [[extendedindex]] vector automatically
+includes the first [[R]] observations so that the bootstrap population
+mean is equal to the sample mean of the data (for the circular blocks
+bootstrap).
 <<mixedwindow.R>>=
 mixedbootstrap <- function(null, alt.list, dataset, R, nboot, blocklength,
                            vcv = var, window = c("rolling", "fixed"),
                            bootstrap = c("moving", "circular")) {
-  nobs <- nrow(dataset)
-  window <- match.arg(window)
-  bootstrap <- match.arg(bootstrap)
+  <<define [[mixedbootstrap]] local variables>>
   rbootindex <-
     switch(bootstrap,
            moving = function()
-             bootindex.movingblock(nobs - R + 1, blocklength),
+             bootindex.movingblock(nobs - R, blocklength),
            circular = function()
-             bootindex.circularblock(nobs - R + 1, blocklength))
-  X <- extract.predictors(null, dataset)
-  y <- extract.target(null, dataset)
-  forecasts.alt <- lapply(alt.list, function(m) {
-    recursive.forecasts(m, dataset, R, window)
-  })
+             bootindex.circularblock(nobs - R, blocklength))
   replicate(nboot, {
     bootindex <- rbootindex()
     extendedindex <- c(seq_len(R), R + bootindex)
@@ -222,25 +232,20 @@ mixedbootstrap <- function(null, alt.list, dataset, R, nboot, blocklength,
       estimates$mu * sqrt((nobs - R) / estimates$avar)
   })})
 }
-@
-
-\section{Out-of-sample bootstrap}
-Use the stepdown procedure to test multiple models
-<<stepm.R>>=
-stepm <- function(teststatistics, bootmatrix, level) {
-  nstatistics <- length(teststatistics)
-  rejected <- rep(FALSE, nstatistics)
-  nrejected.exit <- 0
-  repeat {
-    nrejected.entry <- nrejected.exit
-    criticalvalue <- quantile(apply(bootmatrix[!rejected,,drop=FALSE],
-                                    2, max), 1 - level)
-    rejected[teststatistics > criticalvalue] <- TRUE
-    nrejected.exit <- sum(rejected)
-    if (nrejected.exit == nrejected.entry || nrejected.exit == nstatsitics) break
-  }
-  return(list(criticalvalue = criticalvalue, rejected = rejected))
-}
+@ One nice feature of this bootstrap is that it's only necessary to
+reestimate the benchmark model.  The alternative models are estimated
+once, and their forecasts are resampled along with the original data.
+The first step in the function is to define local variables and
+generate these forecasts.
+<<define [[mixedbootstrap]] local variables>>=
+nobs <- nrow(dataset)
+window <- match.arg(window)
+bootstrap <- match.arg(bootstrap)
+X <- extract.predictors(null, dataset)
+y <- extract.target(null, dataset)
+forecasts.alt <- lapply(alt.list, function(m) {
+  recursive.forecasts(m, dataset, R, window)
+})
 @ 
 
 The next two functions generate indices that induce the moving blocks
@@ -267,44 +272,7 @@ bootindex.circularblock <- function(nobs, blocklength) {
 }
 @
 
-\section{Utility functions}
-
-The [[recursive.forecasts]] function constructs a sequence of rolling,
-recursive, or fixed window forecasts using [[model]].  [[model]] must
-be a function that takes subsets of [[dataset]] as an argument and
-returns an object with a [[predict]] method.
-<<recursive.forecasts.R>>=
-recursive.forecasts <- function(model, dataset, R,
-                                window = c("recursive", "rolling", "fixed"),...) {
-  window <- match.arg(window)
-  n <- nrow(dataset)
-  if (R >= n) stop("dataset must have more than R observations")
-  getprediction <- function(firstobs, lastobs, horizon)
-    predict(model(dataset[seq(firstobs, lastobs, by = 1),],...),
-            newdata = dataset[lastobs + horizon,])
-  switch(window,
-         recursive = sapply((R+1):n, function(s) getprediction(1, s-1, 1)),
-         rolling   = sapply((R+1):n, function(s) getprediction(s-R, s-1, 1)),
-         fixed     = getprediction(1, R, 1:(n-R)))
-}                 
-@ 
-
-<<extract.R>>=
-extract.target <- function(model, dataset) {
-  target <- model.response(model.frame(terms(model(dataset[1,])), dataset))
-  if (is.ts(dataset))
-    target <- ts(target, start = start(dataset), frequency = frequency(dataset))
-  target
-}
-@
-
-<<extract.R>>=
-extract.predictors <- function(model, dataset) {
-  model.matrix(terms(null(dataset[1,])), data = dataset)
-}
-@
-
-\section{DGPs}
+\section{Data Generating Processes}
 
 The processes are $y_t = a * c(1, z_{t-1}) + e1$ $z_t = b * c(1,
 z_{t-1}) + e2$ with $(e1, e2) \sim N(0, v)$
@@ -373,12 +341,80 @@ generate.data.mc2 <- function(n, isPower, nburn = 1600) {
 }
 @
 
+\section{Other functions}
+\subsection{StepM (Romano and Wolf, 2005)} 
+
+[[stepm]] implemetns \citepos{RoW:05} stepdown procedure to test
+multiple models.
+<<stepm.R>>=
+stepm <- function(teststatistics, bootmatrix, level) {
+  nstatistics <- length(teststatistics)
+  rejected <- rep(FALSE, nstatistics)
+  nrejected.exit <- 0
+  repeat {
+    nrejected.entry <- nrejected.exit
+    criticalvalue <- quantile(apply(bootmatrix[!rejected,,drop=FALSE],
+                                    2, max), 1 - level)
+    rejected[teststatistics > criticalvalue] <- TRUE
+    nrejected.exit <- sum(rejected)
+    if (nrejected.exit == nrejected.entry || nrejected.exit == nstatistics) break
+  }
+  return(list(criticalvalue = criticalvalue, rejected = rejected))
+}
+@ 
+
+\subsection{Forecast estimation}
+
+The [[recursive.forecasts]] function constructs a sequence of rolling,
+recursive, or fixed window forecasts using [[model]].  [[model]] must
+be a function that takes subsets of [[dataset]] as an argument and
+returns an object with a [[predict]] method.
+<<recursive.forecasts.R>>=
+recursive.forecasts <- function(model, dataset, R,
+                                window = c("recursive", "rolling", "fixed"),...) {
+  window <- match.arg(window)
+  n <- nrow(dataset)
+  if (R >= n) stop("dataset must have more than R observations")
+  getprediction <- function(firstobs, lastobs, horizon)
+    predict(model(dataset[seq(firstobs, lastobs, by = 1),],...),
+            newdata = dataset[lastobs + horizon,])
+  switch(window,
+         recursive = sapply((R+1):n, function(s) getprediction(1, s-1, 1)),
+         rolling   = sapply((R+1):n, function(s) getprediction(s-R, s-1, 1)),
+         fixed     = getprediction(1, R, 1:(n-R)))
+}                 
+@ 
+
+\subsection{Model manipulation}
+
+[[extract.target]] and [[extract.predictors]] are designed to take the
+[[model]] and [[dataset]] arguments that are passed to functions like
+[[mixedwindow]] and return either the predictand or the predictors
+for the [[null]] model.  These quantities are then used to approximate
+the distribution of the \oos\ average.
+<<extract.R>>=
+extract.target <- function(model, dataset) {
+  target <- model.response(model.frame(terms(model(dataset[1,])), dataset))
+  if (is.ts(dataset))
+    target <- ts(target, start = start(dataset), frequency = frequency(dataset))
+  target
+}
+
+extract.predictors <- function(model, dataset)
+  model.matrix(terms(model(dataset[1,])), data = dataset)
+@
+
 \appendix
+
+The [[NAMESPACE]] file specifies which of the functions defined in
+this package are meant to be accessible to the users (among other things).
 
 \section{Namespace}
 <<NAMESPACE>>=
-export(clarkwest, mixedwindow, mixedbootstrap, generate.data.mc1,
-       generate.data.mc2, recursive.forecasts, stepm, dmw.calculation)
+export(clarkwest, mixedwindow, mixedbootstrap,
+       recursive.forecasts, stepm, dmw.calculation,
+       bootindex.circularblock, bootindex.movingblock, extract.target,
+       extract.predictors)
 @
 
 \section{Licensing information for this software}

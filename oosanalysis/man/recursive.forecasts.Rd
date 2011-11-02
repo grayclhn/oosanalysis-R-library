@@ -1,7 +1,7 @@
 \name{recursive.forecasts}
 \alias{recursive.forecasts}
 \title{Pseudo out-of-sample forecasts}
-\description{Creates a sequence of out-of-sample forecasts}
+\description{Creates a sequence of pseudo out-of-sample forecasts.}
 \usage{
 recursive.forecasts(model, dataset, R,
                     window = c("recursive", "rolling", "fixed"),...)
@@ -31,7 +31,7 @@ recursive.forecasts(model, dataset, R,
   Unpublished manuscript.
 }
 
-\author{Gray Calhoun <gcalhoun@iastate.edu>}
+\author{Gray Calhoun \email{gcalhoun@iastate.edu}}
 
 \examples{
 d <- data.frame(x = rnorm(15), y = rnorm(15))
@@ -43,16 +43,21 @@ recursive.forecasts(ols, d, 4, "recursive")
 ## observation 11 (note that the forecast for observation 11 will be the
 ## 7th element that apply.oos returns in this example)
 newd <- d[11,]
-check <- function(a, b) stopifnot(all.equal(a, b, check.attributes = FALSE))
 
-check(predict(lm(y ~ x, data = d[7:10,]), newd),
-      recursive.forecasts(ols, d, 4, "rolling")[7])
+\dontshow{stopifnot(}
+all.equal(predict(lm(y ~ x, data = d[7:10,]), d[11,]),
+          recursive.forecasts(ols, d, 4, "rolling")[7])
+\dontshow{)}
 
-check(predict(lm(y ~ x, data = d[1:10,]), newd),
-      recursive.forecasts(ols, d, 4, "recursive")[7])
+\dontshow{stopifnot(}
+all.equal(predict(lm(y ~ x, data = d[1:10,]), d[11,]),
+          recursive.forecasts(ols, d, 4, "recursive")[7])
+\dontshow{)}
 
-check(predict(lm(y ~ x, data = d[1:4,]), newd),
-      recursive.forecasts(ols, d, 4, "fixed")[7])
+\dontshow{stopifnot(}
+all.equal(predict(lm(y ~ x, data = d[1:4,]), d[11,]),
+          recursive.forecasts(ols, d, 4, "fixed")[7])
+\dontshow{)}
 }
 
 \keyword{ts}
