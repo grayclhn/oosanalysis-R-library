@@ -49,22 +49,28 @@ dmw.calculation(f, h, R, vcv, tBtF = NULL,
 
 \references{
 
-Diebold, F. X. and Mariano, R. S. 1995, Comparing predictive accuracy.
-\emph{Journal of Business and Economic Statistics}, \bold{138}(1):
-253--263.
+  Calhoun, G. 2011, Documentation appendix: An asymptotically normal
+  out-of-sample test of equal predictive accuracy for nested models.
+  Unpublished manuscript.
+
+  Diebold, F. X. and Mariano, R. S. 1995, Comparing predictive accuracy.
+  \emph{Journal of Business and Economic Statistics}, \bold{138}(1):
+  253--263.
   
-West, K. D. 1996, Asymptotic inference about predictive ability.
-\emph{Econometrica}, \bold{64}(5): 1067--1084.
+  West, K. D. 1996, Asymptotic inference about predictive ability.
+  \emph{Econometrica}, \bold{64}(5): 1067--1084.
 
+  West, K. D. 2006, Forecast evaluation, in G. Elliott, C. Granger, and
+  A. Timmermann, editors, \emph{Handbook of Economic Forecasting},
+  volume 1, pages 99--134. Elsevier.
 
-West, K. D. 2006, Forecast evaluation, in G. Elliott, C. Granger, and
-A. Timmermann, editors, \emph{Handbook of Economic Forecasting}, volume
-1, pages 99--134. Elsevier.
+  West, K. D. and McCracken, M. W. 1998, Regression-based tests of
+  predicitve ability.  \emph{International Economic Review},
+  \bold{39}(4):817--840.
 
-West, K. D. 1998, Regression-based tests of predicitve ability.
-\emph{International Economic Review}, \bold{39}(4):817--840.
 }
-\author{Gray Calhoun}
+
+\author{Gray Calhoun <gcalhoun@iastate.edu>}
 
 \seealso{\code{\link{mixedwindow}}, \code{\link{clarkwest}}}
 \examples{

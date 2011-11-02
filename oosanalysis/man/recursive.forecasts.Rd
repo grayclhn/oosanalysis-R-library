@@ -24,9 +24,15 @@ recursive.forecasts(model, dataset, R,
   window, each forecast uses the first \code{R} observations.
 }
 \value{A vector of length \code{nrow(dataset) - R}, containing the forecasts.}
+
+\references{
+  Calhoun, G. 2011, Documentation appendix: An asymptotically normal
+  out-of-sample test of equal predictive accuracy for nested models.
+  Unpublished manuscript.
+}
+
 \author{Gray Calhoun <gcalhoun@iastate.edu>}
 
-\seealso{\code{\link{forecast.error}}}
 \examples{
 d <- data.frame(x = rnorm(15), y = rnorm(15))
 ols <- function(d) lm(y ~ x, data = d)

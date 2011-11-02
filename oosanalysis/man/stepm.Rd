@@ -1,69 +1,28 @@
 \name{stepm}
 \alias{stepm}
-%- Also NEED an '\alias' for EACH other topic documented here.
 \title{Romano and Wolf's (2005) StepM}
-\description{
-%%  ~~ A concise (1-5 lines) description of what the function does. ~~
-}
+\description{Implements Romano and Wolf's StepM, a stepdown procedure
+  for multiple hypothesis testing.}}
 \usage{
 stepm(teststatistics, bootmatrix, level)
 }
-%- maybe also 'usage' for other objects documented here.
+
 \arguments{
-  \item{teststatistics}{
-%%     ~~Describe \code{teststatistics} here~~
+  \item{teststatistics}{}
+  \item{bootmatrix}{}
+  \item{level}{}
 }
-  \item{bootmatrix}{
-%%     ~~Describe \code{bootmatrix} here~~
-}
-  \item{level}{
-%%     ~~Describe \code{level} here~~
-}
-}
-\details{
-%%  ~~ If necessary, more details than the description above ~~
-}
-\value{
-%%  ~Describe the value returned
-%%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
-%% ...
-}
+\details{text}
+\value{text}
 \references{
-%% ~put references to the literature/web site here ~
+  Calhoun, G. 2011, Documentation appendix: An asymptotically normal
+  out-of-sample test of equal predictive accuracy for nested models.
+  Unpublished manuscript.
 }
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
-}
+\author{Gray Calhoun <gcalhoun@iastate.edu>}
 
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
-\seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
-}
+\seealso{\code{\link{boot}}}
 \examples{
 ##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
-
-## The function is currently defined as
-function(teststatistics, bootmatrix, level) {
-  nstatistics <- length(teststatistics)
-  rejected <- rep(FALSE, nstatistics)
-  nrejected.exit <- 0
-  repeat {
-    nrejected.entry <- nrejected.exit
-    criticalvalue <- quantile(apply(bootmatrix[!rejected,,drop=FALSE],
-                                    2, max), 1 - level)
-    rejected[teststatistics > criticalvalue] <- TRUE
-    nrejected.exit <- sum(rejected)
-    if (nrejected.exit == nrejected.entry || nrejected.exit == nstatsitics) break
-  }
-  return(list(criticalvalue = criticalvalue, rejected = rejected))
-  }
 }
 

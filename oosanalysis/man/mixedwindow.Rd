@@ -1,9 +1,9 @@
 \name{mixedwindow}
 \alias{mixedwindow}
+\alias{mixedbootstrap}
 \title{Calhoun's (2011) Out-of-Sample comparison}
-\description{
-%%  ~~ A concise (1-5 lines) description of what the function does. ~~
-}
+\description{Implements the asymptotically normal OOS test statistics
+  proposed by Calhoun (2011).}
 \usage{
 mixedwindow(null, alt, dataset, R, vcv = var, window = c("rolling", "fixed"))
 
@@ -11,56 +11,34 @@ mixedbootstrap(null, alt.list, dataset, R, nboot, blocklength,
                vcv = var, window = c("rolling", "fixed"),
                bootstrap = c("moving", "circular"))
 }
-%- maybe also 'usage' for other objects documented here.
+
 \arguments{
-  \item{null}{
-%%     ~~Describe \code{null} here~~
+  \item{null}{}
+  \item{alt}{}
+  \item{alt.list}{}
+  \item{dataset}{}
+  \item{R}{}
+  \item{nboot}{An integer, the number of bootstrap replications.}
+  \item{blocklength}{An integer, the length of the blocks for the moving
+    or circular block bootstraps.}
+  \item{vcv}{}
+  \item{window}{}
+  \item{bootstrap}{Indicates whether to do the moving blocks bootstrap
+    (MBB) (Kunsch, 1989) or circular blocks bootstrap (CBB)
+    (Politis and Romano, 19..)}
 }
-  \item{alt}{
-%%     ~~Describe \code{alt} here~~
-}
-  \item{dataset}{
-%%     ~~Describe \code{dataset} here~~
-}
-  \item{R}{
-%%     ~~Describe \code{R} here~~
-}
-\item{nboot}{An integer, the number of bootstrap replications.}
-\item{blocklength}{An integer, the length of the blocks for the moving
-               or circular block bootstraps.}
-  \item{vcv}{
-%%     ~~Describe \code{vcv} here~~
-}
-\item{window}{
-%%     ~~Describe \code{window} here~~
-}
-\item{bootstrap}{Indicates whether to do the moving blocks bootstrap
-               (MBB) (Kunsch, 1989) or circular blocks bootstrap (CBB)
-               (Politis and Romano, 19..)}
-}
-\details{
-%%  ~~ If necessary, more details than the description above ~~
-}
-\value{
-%%  ~Describe the value returned
-%%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
-%% ...
-}
+\details{text}
+\value{text}
 \references{
-%% ~put references to the literature/web site here ~
-}
-\author{
-%%  ~~who you are~~
-}
-\note{
-%%  ~~further notes~~
-}
+  Calhoun, G. 2011, An asymptotically normal out-of-sample test of equal
+  predictive accuracy for nested models.  Unpublished manuscript.
 
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
-\seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
+  Calhoun, G. 2011, Documentation appendix: An asymptotically normal
+  out-of-sample test of equal predictive accuracy for nested models.
+  Unpublished manuscript.
 }
-\examples{}
+\author{Gray Calhoun <gcalhoun@iastate.edu>}
+\seealso{\code{\link{dmw.correction}}, \code{\link{clarkwest}}}
+\examples{
+## do something
+}

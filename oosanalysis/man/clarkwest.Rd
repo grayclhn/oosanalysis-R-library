@@ -18,7 +18,7 @@ clarkwest.calculation(target, null.forecast, alt.forecast)
   \item{vcv}{}
   \item{target}{}
   \item{null.forecast}{}
-  \item{alt.forecast}
+  \item{alt.forecast}{}
 }
 
 \value{Both functions return the same thing, a list with elements
@@ -29,19 +29,26 @@ clarkwest.calculation(target, null.forecast, alt.forecast)
   test.}
 }
 \references{
-Clark, T. E., West, K. D. 2006, Using out-of-sample mean squared
+  Calhoun, G. 2011, Documentation appendix: An asymptotically normal
+  out-of-sample test of equal predictive accuracy for nested models.
+  Unpublished manuscript.
+
+  Clark, T. E., West, K. D. 2006, Using out-of-sample mean squared
   prediction errors to test the martingale difference hypothesis.
   \emph{Journal of Econometrics}, \bold{135}(1): 155--186.
 
-Clark, T. E., West, K. D. 2007, Approximately normal tests for equal
-predictive accuracy in nested models.  \emph{Journal of Econometrics},
-\bold{138}(1): 291--311.
+  Clark, T. E., West, K. D. 2007, Approximately normal tests for equal
+  predictive accuracy in nested models.  \emph{Journal of Econometrics},
+  \bold{138}(1): 291--311.
+
 }
 
-\author{Gray Calhoun}
+\author{Gray Calhoun <galhoun@iastate.edu>}
 
-\seealso{\code{\link{dmw.calculation}}}
-\examples{}
+\seealso{\code{\link{dmw.calculation}}, \code{\link{mixedwindow}}}
+\examples{
+## do something
+}
 
 \keyword{ts}
 \keyword{htest}
