@@ -5,34 +5,38 @@
 %%  ~~ A concise (1-5 lines) description of what the function does. ~~
 }
 \usage{
-mixedwindow(dataset, null, alt, xfn, yfn, R, window = c("rolling", "fixed"), vcv = var)
+mixedwindow(null, alt, dataset, R, vcv = var, window = c("rolling", "fixed"))
+
+mixedbootstrap(null, alt.list, dataset, R, nboot, blocklength,
+               vcv = var, window = c("rolling", "fixed"),
+               bootstrap = c("moving", "circular"))
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{dataset}{
-%%     ~~Describe \code{dataset} here~~
-}
   \item{null}{
 %%     ~~Describe \code{null} here~~
 }
   \item{alt}{
 %%     ~~Describe \code{alt} here~~
 }
-  \item{xfn}{
-%%     ~~Describe \code{xfn} here~~
-}
-  \item{yfn}{
-%%     ~~Describe \code{yfn} here~~
+  \item{dataset}{
+%%     ~~Describe \code{dataset} here~~
 }
   \item{R}{
 %%     ~~Describe \code{R} here~~
 }
-  \item{window}{
-%%     ~~Describe \code{window} here~~
-}
+\item{nboot}{An integer, the number of bootstrap replications.}
+\item{blocklength}{An integer, the length of the blocks for the moving
+               or circular block bootstraps.}
   \item{vcv}{
 %%     ~~Describe \code{vcv} here~~
 }
+\item{window}{
+%%     ~~Describe \code{window} here~~
+}
+\item{bootstrap}{Indicates whether to do the moving blocks bootstrap
+               (MBB) (Kunsch, 1989) or circular blocks bootstrap (CBB)
+               (Politis and Romano, 19..)}
 }
 \details{
 %%  ~~ If necessary, more details than the description above ~~
