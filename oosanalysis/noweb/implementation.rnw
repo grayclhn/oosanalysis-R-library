@@ -40,6 +40,25 @@
 \author{Gray Calhoun\\Iowa State University} \date{\today}
 
 \maketitle
+
+\begin{abstract}
+<<DESCRIPTION>>=
+Package: oosanalysis
+Type: Package
+Title: Pseudo out-of-sample forecasting
+Version: 0.2.0
+Date: 2011-01-28
+Author: Gray Calhoun
+Maintainer: Gray Calhoun <gcalhoun@iastate.edu>
+Description: Functions for out-of-sample comparisons of forecasting models
+Depends: R(>= 2.10), methods, MASS
+Suggests: zoo, dyn
+License: GPL (>= 3)
+LazyLoad: yes
+LazyData: yes
+@ 
+\end{abstract}
+
 \tableofcontents
 
 \section{Out-of-sample comparisons}
@@ -334,6 +353,7 @@ extract.target <- function(model, dataset) {
 @ %def extract.predictors extract.target
 
 \appendix
+
 \section{Namespace}
 The [[NAMESPACE]] file specifies which of the functions defined in
 this package are meant to be accessible to the users (among other things).
@@ -361,14 +381,15 @@ You should have received a copy of the \gnu\ General Public License
 along with this program.  If not, see
 \texttt{<http://www.gnu.org/licenses/>}.
 
-\bibliography{AllRefs}
-
 \section{Index}
 
 \subsection{Variables}
 \nowebindex
 \subsection{Chunks}
 \nowebchunks
+
+\bibliography{AllRefs}
+\addcontentsline{toc}{section}{References}
 
 \end{document}
 
