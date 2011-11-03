@@ -4,7 +4,7 @@ zipfile := $(package)_$(version).tar.gz
 
 RFLAGS   := --vanilla --slave
 Rscript  := Rscript
-latexmk  := /usr/local/texlive/2009/bin/x86_64-linux/latexmk
+latexmk  := /usr/local/texlive/2011/bin/x86_64-linux/latexmk
 LATEXMKFLAGS := -pdf -silent
 noweave := noweave
 notangle:= notangle
@@ -20,7 +20,7 @@ $(zipfile): check
 	R CMD build $(package)
 
 install: $(zipfile)
-	R CMD INSTALL $(package)
+	sudo R CMD INSTALL $(package)
 	touch $@
 
 $(Rfiles) $(package)/NAMESPACE: $(package)/noweb/implementation.rnw
@@ -30,7 +30,7 @@ $(Rfiles) $(package)/NAMESPACE: $(package)/noweb/implementation.rnw
 	cd $(dir $<) && $(latexmk) $(LATEXMKFLAGS) $(<F)
 $(package)/inst/doc/implementation.tex: $(package)/noweb/implementation.rnw
 	mkdir -p $(package)/inst/doc
-	$(noweave) -latex -x -delay $< | sed /^#/d | cpif $@
+	$(noweave) -latex -index -delay $< | sed /^#/d | cpif $@
 
 # I like this next rule.  The 'check' file depends on every file that's
 # under version control or unknown in the $(package) subdirectory.

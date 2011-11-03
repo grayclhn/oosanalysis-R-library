@@ -1,6 +1,6 @@
 Package: oosanalysis
 Type: Package
-Title: Functions for out-of-sample comparisons of forecasting models
+Title: Pseudo out-of-sample forecasting
 Version: 0.2
 Date: 2011-01-28
 Author: Gray Calhoun

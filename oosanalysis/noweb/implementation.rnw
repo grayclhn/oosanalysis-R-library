@@ -1,18 +1,17 @@
 \documentclass[11pt,draft]{article}
-\usepackage{noweb,setspace,amsmath,amsthm,amssymb,microtype,eco}
+\usepackage{noweb,setspace,amsmath,amsthm,amssymb,microtype,eco,ragged2e}
+\usepackage{hyperref}
 \usepackage[T1]{fontenc}
 \usepackage[round]{natbib}
 \usepackage[margin = 1in]{geometry}
-\DisableLigatures{family=tt*}
 \frenchspacing
-\bibliographystyle{abbrvnat}
-\newcommand\citepos[2][]{\citeauthor{#2}'s \citeyearpar[#1]{#2}}
-
-% These next two lines make latex more willing to break code chunks
-% across pages:
+\RaggedRight
+\DisableLigatures{family=tt*}
+\noweboptions{longxref}
 \def\nwendcode{\endtrivlist \endgroup}
 \let\nwdocspar=\par
-\noweboptions{longxref}
+\bibliographystyle{abbrvnat}
+\newcommand\citepos[2][]{\citeauthor{#2}'s \citeyearpar[#1]{#2}}
 
 \newcommand{\dmw}{\textsc{dmw}}
 \newcommand{\gnu}{\textsc{gnu}}
@@ -35,8 +34,8 @@
 
 \begin{document}
 
-\title{Implementation details: `oosanalysis'
-  package\footnote{Copyright \textcopyright\ 2011 by Gray Calhoun}}
+\title{Implementation details: `oosanalysis' package\footnote{Version
+    0.2.0.  Copyright \textcopyright\ 2011 by Gray Calhoun}}
 
 \author{Gray Calhoun\\Iowa State University} \date{\today}
 
@@ -92,7 +91,7 @@ dmw.calculation <- function(f, h, R, vcv, tBtF = NULL,
   return(list(mu = mean(f), avar = S[1,1] + lambda$fh * (S[1,2] + S[2,1]) 
                                    + lambda$hh * S[2,2]))
 }
-@ 
+@ %def dmw.calculation
 
 The function [[dmw.lambda]] calculates the scale terms used to
 calculate the asymptotic covariance matrix of the \oos\ average, $\bar
@@ -116,7 +115,7 @@ dmw.lambda <- function(pi, window = c("recursive", "rolling", "fixed")) {
   }
   return(list(fh = lambda.fh, hh = lambda.hh))
 }
-@ 
+@ %def dmw.lambda
 
 \subsection{Clark and West (2006, 2007) test statistic}
 The next statisic is developed in \citet{ClW:06,ClW:07}.  They build
@@ -135,7 +134,7 @@ clarkwest <- function(null, alt, dataset, R, vcv = var,
     null.forecast = recursive.forecasts(null, dataset, R, window),
     alt.forecast  = recursive.forecasts(alt, dataset, R, window),
     vcv)
-@ 
+@ %def clarkwest
 
 <<clarkwest.R>>=
 clarkwest.calculation <- function(target, null.forecast, 
@@ -149,7 +148,7 @@ clarkwest.calculation <- function(target, null.forecast,
   return(list(mu = mu, avar = avar, 
               pvalue = pnorm(sqrt(P) * mu, 0, sqrt(avar), FALSE)))
 }
-@ 
+@ %def clarkwest.calculation
 
 \subsection{Mixed window test statistics}
 
@@ -172,7 +171,7 @@ mixedwindow <- function(null, alt, dataset, R, vcv = var,
     with(estimates, pnorm(mu, 0, sqrt(avar / (nobs - R)), FALSE))
   return(estimates)
 }
-@ [[mixedwindow.calculation]] constructs the \oos\ processes and then
+@ [[mixedwindow.calculation]] constructs the \oos\ processes and then %def mixedwindow
 passes everything to the [[dmw.calculation]] function to generate the
 final statistics.  It might seem a little silly to have
 [[mixedwindow]] and [[mixedwindow.calculation]] as distinct functions,
@@ -195,7 +194,7 @@ mixedwindow.calculation <- function(y, X, forecasts.null, forecasts.alt, vcv) {
                                      errors.null) * X[oos,,drop=FALSE])),
                   window = "recursive")
 }
-@
+@ %def mixedwindow.calculation
 
 The [[mixedbootstrap]] function uses [[mixedwindow.calculation]] to
 implement \citepos{Cal:11b} bootstrap.  I implement the bootstrap by
@@ -232,7 +231,7 @@ mixedbootstrap <- function(null, alt.list, dataset, R, nboot, blocklength,
       estimates$mu * sqrt((nobs - R) / estimates$avar)
   })})
 }
-@ One nice feature of this bootstrap is that it's only necessary to
+@ One nice feature of this bootstrap is that it's only necessary to %def mixedbootstrap
 reestimate the benchmark model.  The alternative models are estimated
 once, and their forecasts are resampled along with the original data.
 The first step in the function is to define local variables and
@@ -270,81 +269,12 @@ bootindex.circularblock <- function(nobs, blocklength) {
   as.vector(sapply(blockstarts, function(s)
     (s + seq_len(blocklength) - 1) %% nobs + 1))[seq_len(nobs)]
 }
-@
-
-\section{Data Generating Processes}
-
-The processes are $y_t = a * c(1, z_{t-1}) + e1$ $z_t = b * c(1,
-z_{t-1}) + e2$ with $(e1, e2) \sim N(0, v)$
-<<datageneration.R>>=
-### -*- mode: R-mode -*-
-generate.data.mc1 <- function(n, isPower) {
-  if (!isPower) {
-    gam <- rep(0, n)
-  } else if (isPower == 1) {
-    gam <- rep(0.35, n)
-  } else {
-    n1 <- floor(n/2)
-    gam <- c(rep(0, n1), rep(.7, n - n1))
-  }
-  a0 <- .5
-  b <- c(.15, .95)
-  v <- matrix(c(18, -.5, -.5, .025), 2)
-  
-  Ez <- b[1] / (1 - b[2])
-  Ey <- a0 + gam[1] * Ez
-
-  ## elements of the variance-covariance matrix
-  Vz <- v[2,2] / (1 - b[2]^2)
-  Vy <- v[1,1] + gam[1]^2 * Vz
-  Cyz <- gam[1] * b[2] * Vz + v[1,2]
-
-  ## we're going to let x_t = (y_t, z_t); draw from the stationary
-  ## distribution and then populate the rest of the matrix with the
-  ## innovations.
-  x <- rbind(mvrnorm(1, c(Ey, Ez), matrix(c(Vy, Cyz, Cyz, Vz), 2)),
-             mvrnorm(n, c(0,0), v))
-  for (i in 1 + (1:n)) {
-    A <- matrix(c(0, 0, gam[i-1], b[2]), 2)
-    x[i,] = drop(c(a0, b[1]) + A %*% x[i-1,] + x[i,])
-  }
-  data.frame(y = x[-1,1], zlag = x[-n,2])
-}
-@
-
-
-<<datageneration.R>>=
-### -*- mode: R-mode -*-
-generate.data.mc2 <- function(n, isPower, nburn = 1600) {
-  ## The processes are
-  ## y_t = a %*% c(1, y_{t-1}, z_{t-1},...,z_{t-4}) + e1
-  ## z_t = b %*% c(z_{t-1},...,z_{t-4}) + e2
-  ## with 
-  ## (e1, e2) ~ N(0, v)
-  a <- c(2.237, 0.261, isPower * c(3.363, -0.633, -0.377, -0.529))
-  b <- c(0, 0, 0.804, -0.221, 0.226, -0.205)
-  v <- matrix(c(10.505, 1.036, 1.036, 0.366), 2)
-
-  ntot <- n + nburn
-  ret <- nburn + (5:n)
-  ## we're going to let x_t = (y_t, z_t); draw from the stationary
-  ## distribution and then populate the rest of the matrix with the
-  ## innovations.
-  x <- mvrnorm(ntot, c(0,0), v)
-  A <- rbind(a, b)
-  for (i in 5:ntot) {
-    x[i,] = c(A %*% c(1, x[i-1,], x[i - (2:4),2]) + x[i,])
-  }
-  
-  data.frame(y = x[ret, 1], y1 = x[ret-1,1], z1 = x[ret-1, 2],
-             z2 = x[ret-2, 2], z3 = x[ret-3, 2], z4 = x[ret-4, 2])
-}
-@
+@ %def bootindex.movingblock bootindex.circularblock
 
 \section{Other functions}
 \subsection{StepM (Romano and Wolf, 2005)} 
 
-[[stepm]] implemetns \citepos{RoW:05} stepdown procedure to test
+[[stepm]] implements \citepos{RoW:05} stepdown procedure to test
 multiple models.
 <<stepm.R>>=
 stepm <- function(teststatistics, bootmatrix, level) {
@@ -361,7 +291,7 @@ stepm <- function(teststatistics, bootmatrix, level) {
   }
   return(list(criticalvalue = criticalvalue, rejected = rejected))
 }
-@ 
+@ %def stepm
 
 \subsection{Forecast estimation}
 
@@ -383,7 +313,7 @@ recursive.forecasts <- function(model, dataset, R,
          rolling   = sapply((R+1):n, function(s) getprediction(s-R, s-1, 1)),
          fixed     = getprediction(1, R, 1:(n-R)))
 }                 
-@ 
+@ %def recursive.forecasts
 
 \subsection{Model manipulation}
 
@@ -393,23 +323,21 @@ recursive.forecasts <- function(model, dataset, R,
 for the [[null]] model.  These quantities are then used to approximate
 the distribution of the \oos\ average.
 <<extract.R>>=
+extract.predictors <- function(model, dataset)
+  model.matrix(terms(model(dataset[1,])), data = dataset)
 extract.target <- function(model, dataset) {
   target <- model.response(model.frame(terms(model(dataset[1,])), dataset))
   if (is.ts(dataset))
     target <- ts(target, start = start(dataset), frequency = frequency(dataset))
   target
 }
-
-extract.predictors <- function(model, dataset)
-  model.matrix(terms(model(dataset[1,])), data = dataset)
-@
+@ %def extract.predictors extract.target
 
 \appendix
-
+\section{Namespace}
 The [[NAMESPACE]] file specifies which of the functions defined in
 this package are meant to be accessible to the users (among other things).
 
-\section{Namespace}
 <<NAMESPACE>>=
 export(clarkwest, mixedwindow, mixedbootstrap,
        recursive.forecasts, stepm, dmw.calculation,
@@ -434,4 +362,15 @@ along with this program.  If not, see
 \texttt{<http://www.gnu.org/licenses/>}.
 
 \bibliography{AllRefs}
+
+\section{Index}
+
+\subsection{Variables}
+\nowebindex
+\subsection{Chunks}
+\nowebchunks
+
 \end{document}
+
+% LocalWords:  mixedwindow dmw mixedbootstrap rbootindex blocklength stepm
+% LocalWords:  extendedindex NAMESPACE
