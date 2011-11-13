@@ -1,9 +1,9 @@
-\name{recursive.forecasts}
-\alias{recursive.forecasts}
+\name{recursive_forecasts}
+\alias{recursive_forecasts}
 \title{Pseudo out-of-sample forecasts}
 \description{Creates a sequence of pseudo out-of-sample forecasts.}
 \usage{
-recursive.forecasts(model, dataset, R,
+recursive_forecasts(model, dataset, R,
                     window = c("recursive", "rolling", "fixed"),...)
 }
 \arguments{
@@ -37,7 +37,7 @@ recursive.forecasts(model, dataset, R,
 d <- data.frame(x = rnorm(15), y = rnorm(15))
 ols <- function(d) lm(y ~ x, data = d)
 ## Basic Usage:
-recursive.forecasts(ols, d, 4, "recursive")
+recursive_forecasts(ols, d, 4, "recursive")
 
 ## Illustrate different estimation windows by comparing forecasts for
 ## observation 11 (note that the forecast for observation 11 will be the
@@ -46,17 +46,17 @@ newd <- d[11,]
 
 \dontshow{stopifnot(}
 all.equal(predict(lm(y ~ x, data = d[7:10,]), d[11,]),
-          recursive.forecasts(ols, d, 4, "rolling")[7])
+          recursive_forecasts(ols, d, 4, "rolling")[7])
 \dontshow{)}
 
 \dontshow{stopifnot(}
 all.equal(predict(lm(y ~ x, data = d[1:10,]), d[11,]),
-          recursive.forecasts(ols, d, 4, "recursive")[7])
+          recursive_forecasts(ols, d, 4, "recursive")[7])
 \dontshow{)}
 
 \dontshow{stopifnot(}
 all.equal(predict(lm(y ~ x, data = d[1:4,]), d[11,]),
-          recursive.forecasts(ols, d, 4, "fixed")[7])
+          recursive_forecasts(ols, d, 4, "fixed")[7])
 \dontshow{)}
 }
 

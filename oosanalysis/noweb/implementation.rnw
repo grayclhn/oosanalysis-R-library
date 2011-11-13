@@ -300,7 +300,7 @@ The [[recursive_forecasts]] function constructs a sequence of rolling,
 recursive, or fixed window forecasts using [[model]].  [[model]] must
 be a function that takes subsets of [[dataset]] as an argument and
 returns an object with a [[predict]] method.
-<<recursive_forecasts.R>>=
+<<recursive-forecasts.R>>=
 recursive_forecasts <- function(model, dataset, R,
                                 window = c("recursive", "rolling", "fixed"),...) {
   window <- match.arg(window)

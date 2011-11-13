@@ -1,13 +1,13 @@
-\name{bootindex.circularblock}
-\alias{bootindex.circularblock}
-\alias{bootindex.movingblock}
+\name{bootindex_circularblock}
+\alias{bootindex_circularblock}
+\alias{bootindex_movingblock}
 \title{Indices to induce block bootstraps}
 \description{These functions generate the random indices necessary to
   implement the moving blocks bootstrap (Kunsch, 1989) and the circular
   blocks bootstrap (Politis and Romano, 1994)}
 \usage{
-bootindex.movingblock(nobs, blocklength)
-bootindex.circularblock(nobs, blocklength)
+bootindex_movingblock(nobs, blocklength)
+bootindex_circularblock(nobs, blocklength)
 }
 
 \arguments{
@@ -21,11 +21,11 @@ bootindex.circularblock(nobs, blocklength)
   the original.  The blocks are drawn independently of each other.  The
   circular block bootstrap allows (for example) X[n-1], X[n], X[1], X[2]
   to be a valid block of length 4, and the moving blocks bootstrap does
-  not.  The functions \code{bootindex.movingblock} and
-  \code{bootindex.circularblock} give the indices that induce the
+  not.  The functions \code{bootindex_movingblock} and
+  \code{bootindex_circularblock} give the indices that induce the
   bootstrap, so for example we get a particular circular block bootstrap
   draw of \code{X} with block length 8 from the
-  command \code{X[bootindex.movingblock(length(X), 8)]}.
+  command \code{X[bootindex_movingblock(length(X), 8)]}.
   }
 
 \value{A vector of indices that corresponds to a single bootstrap draw.}
@@ -56,7 +56,7 @@ level <- .1
 X <- 2 + arima.sim(n = nobs, list(ma = c(0.5)))
 
 naive <- replicate(nboot, mean(X[sample(1:nobs, nobs, replace = TRUE)])) - mean(X)
-smart <- replicate(nboot, mean(X[bootindex.circularblock(nobs, 5)])) - mean(X)
+smart <- replicate(nboot, mean(X[bootindex_circularblock(nobs, 5)])) - mean(X)
 
 ## corresponding critical values
 quantile(naive, 1 - level)
@@ -66,7 +66,7 @@ quantile(smart, 1 - level)
 mc <- replicate(300, {
   X <- arima.sim(n = nobs, list(ma = c(0.5)))
   naive <- replicate(nboot, mean(X[sample(1:nobs, nobs, replace = TRUE)])) - mean(X)
-  smart <- replicate(nboot, mean(X[bootindex.circularblock(nobs, 5)])) - mean(X)
+  smart <- replicate(nboot, mean(X[bootindex_circularblock(nobs, 5)])) - mean(X)
   c(naive = mean(X) >= quantile(naive, 1 - level),
     smart = mean(X) >= quantile(smart, 1 - level))
   })

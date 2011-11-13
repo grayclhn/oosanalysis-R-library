@@ -1,6 +1,6 @@
 \name{clarkwest}
 \alias{clarkwest}
-\alias{clarkwest.calculation}
+\alias{clarkwest_calculation}
 \title{Clark and West's (2006, 2007) Out-of-Sample Test}
 \description{Functions to calculate Clark and West's (2006, 2007)
   approximately normal \acronym{oos} statistic.}
@@ -8,7 +8,7 @@
 clarkwest(null, alt, dataset, R, vcv = var,
           window = c("rolling", "recursive", "fixed"))
 
-clarkwest.calculation(target, null.forecast, alt.forecast, vcv)
+clarkwest_calculation(target, null.forecast, alt.forecast, vcv)
 }
 \arguments{
   \item{null}{A function that takes a subset of the data \code{dataset}
@@ -55,7 +55,7 @@ clarkwest.calculation(target, null.forecast, alt.forecast, vcv)
   choose the "recursive" estimation strategy because it is popular in
   practice, but be careful.
 
-  \code{clarkwest.calculation} does all of the algebra and
+  \code{clarkwest_calculation} does all of the algebra and
   \code{clarkwest} is a convenient interface to it that calculates the
   forecasts automatically.
 }
@@ -81,8 +81,8 @@ clarkwest.calculation(target, null.forecast, alt.forecast, vcv)
 
 \author{Gray Calhoun \email{galhoun@iastate.edu}}
 
-\seealso{\code{\link{dmw.calculation}}, \code{\link{mixedwindow}},
-  \code{\link{recursive.forecasts}}, \code{\link{predict}}}
+\seealso{\code{\link{dmw_calculation}}, \code{\link{mixedwindow}},
+  \code{\link{recursive_forecasts}}, \code{\link{predict}}}
 \examples{
 x <- rnorm(100)
 d <- data.frame(y = x + rnorm(100), x = x)

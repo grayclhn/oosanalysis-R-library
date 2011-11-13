@@ -1,5 +1,5 @@
-\name{dmw.calculation}
-\alias{dmw.calculation}
+\name{dmw_calculation}
+\alias{dmw_calculation}
 \title{Diebold-Mariano-West out-of-sample t-test}
 
 \description{The Diebold-Mariano-West \acronym{oos} t-test can be used
@@ -7,7 +7,7 @@
     restrictive circumstances (see West, 2006).  The forecast are
     assumed to be constructed using a fixed, recursive, or rolling
     estimation window and depend on the estimated coefficients
-    \eqn{\hat\beta_t}.  The function \code{dmw.calculation} takes as
+    \eqn{\hat\beta_t}.  The function \code{dmw_calculation} takes as
     arguments the matrices and vectors that West (1996) and West and
     McCracken (1998) use to represent the asymptotic distribution of
     this statistic and just assembles the mean and variance components
@@ -15,7 +15,7 @@
 
 
 \usage{
-dmw.calculation(f, h, R, vcv, tBtF = NULL,
+dmw_calculation(f, h, R, vcv, tBtF = NULL,
                 window = c("recursive", "rolling", "fixed"))
 }
 \arguments{
@@ -72,7 +72,7 @@ dmw.calculation(f, h, R, vcv, tBtF = NULL,
 \author{Gray Calhoun \email{gcalhoun@iastate.edu}}
 
 \seealso{\code{\link{mixedwindow}}, \code{\link{clarkwest}},
-  \code{\link{recursive.forecasts}}, \code{\link{predict}}} 
+  \code{\link{recursive_forecasts}}, \code{\link{predict}}} 
 \examples{
 x <- rnorm(100)
 d <- data.frame(y = x + rnorm(100), x = x)
@@ -86,7 +86,7 @@ error.model2 <- d$y[oos] - predict(lm(y ~ x, data = d[-oos,]),
 # test that the two models have equal population MSE.  Note that F = 0
 # in this setting.
 estimates <-
-  dmw.calculation(error.model1^2 - error.model2^2,
+  dmw_calculation(error.model1^2 - error.model2^2,
                   cbind(error.model1, error.model2, error.model2 * x),
                   R = R, vcv = var)
 # calculate p-value for a one-sided test

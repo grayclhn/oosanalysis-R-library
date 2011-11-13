@@ -89,8 +89,8 @@ mixedbootstrap(null, alt.list, dataset, R, nboot, blocklength,
 }
 \author{Gray Calhoun \email{gcalhoun@iastate.edu}}
 
-\seealso{\code{\link{dmw.calculation}}, \code{\link{clarkwest}},
-  \code{\link{recursive.forecasts}}, \code{\link{predict}}, \code{\link{boot}}}
+\seealso{\code{\link{dmw_calculation}}, \code{\link{clarkwest}},
+  \code{\link{recursive_forecasts}}, \code{\link{predict}}, \code{\link{boot}}}
 
 \examples{
 n <- 30

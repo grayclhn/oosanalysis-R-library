@@ -1,11 +1,11 @@
-\name{extract.target}
-\alias{extract.target}
-\alias{extract.predictors}
+\name{extract_target}
+\alias{extract_target}
+\alias{extract_predictors}
 \title{Convenience function to extract data from a model}
 \description{Convenience function to extract data from a model.}
 \usage{
-extract.target(model, dataset)
-extract.predictors(model, dataset)
+extract_target(model, dataset)
+extract_predictors(model, dataset)
 }
 \arguments{
   \item{model}{A function that takes a data frame as its argument and
@@ -13,9 +13,9 @@ extract.predictors(model, dataset)
   \item{dataset}{A data frame.}
 }
 \details{text}
-\value{For \code{extract.target}, a vector that contains the values from
+\value{For \code{extract_target}, a vector that contains the values from
   \code{dataset} of the dependent variable specified in \code{model}.
-  For \code{extract.predictors}, the same thing but now the
+  For \code{extract_predictors}, the same thing but now the
   \code{model.matrix} of the predictors.}
 \references{
   Calhoun, G. 2011, Documentation appendix: An asymptotically normal
@@ -32,12 +32,12 @@ model <- function(d) lm(y ~ x, data = d)
 dataset <- data.frame(y = rnorm(10), x = rnorm(10))
 
 \dontshow{stopifnot(isTRUE(}
-all.equal(extract.target(model, dataset), dataset$y,
+all.equal(extract_target(model, dataset), dataset$y,
           check.attributes = FALSE)
 \dontshow{))}
 
 \dontshow{stopifnot(isTRUE(}
-all.equal(extract.predictors(model, dataset),
+all.equal(extract_predictors(model, dataset),
           cbind(1, dataset$x), check.attributes = FALSE)
 \dontshow{))}
 }
