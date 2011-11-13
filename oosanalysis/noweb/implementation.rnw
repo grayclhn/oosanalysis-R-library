@@ -41,24 +41,6 @@
 
 \maketitle
 
-\begin{abstract}
-<<DESCRIPTION>>=
-Package: oosanalysis
-Type: Package
-Title: Pseudo out-of-sample forecasting
-Version: 0.2.0
-Date: 2011-01-28
-Author: Gray Calhoun
-Maintainer: Gray Calhoun <gcalhoun@iastate.edu>
-Description: Functions for out-of-sample comparisons of forecasting models
-Depends: R(>= 2.10), methods, MASS
-Suggests: zoo, dyn
-License: GPL (>= 3)
-LazyLoad: yes
-LazyData: yes
-@ 
-\end{abstract}
-
 \tableofcontents
 
 \section{Out-of-sample comparisons}
@@ -76,7 +58,7 @@ good general way to do that.  The function [[mixedwindow]] does
 provide a higher-level function that then calls this function, so it
 might be a good template if one wants to code up others.
 
-The function [[dmw.calculation]] estimates the mean and variance of
+The function [[dmw_calculation]] estimates the mean and variance of
 the \oos\ process $f_{t}(\beta)$.  In \citet{WeM:98}, the recursive
 window coefficient estimator can be written in the form
 \begin{equation}
@@ -97,10 +79,10 @@ f_{t}(\beta)$, $S$ is the long-run variance of $(f_{t}, h_{t})$, and
 $\lambda$ is a vector of scale factors that depend on the window used.
 
 <<dmw.R>>=
-dmw.calculation <- function(f, h, R, vcv, tBtF = NULL, 
+dmw_calculation <- function(f, h, R, vcv, tBtF = NULL, 
                             window = c("recursive", "rolling", "fixed")) {
   noos <- length(f)
-  lambda <- dmw.lambda(pi = noos / R, window)
+  lambda <- dmw_lambda(pi = noos / R, window)
   htBtF <- if (is.null(tBtF)) {
     rep(0, noos) 
   } else {
@@ -110,14 +92,14 @@ dmw.calculation <- function(f, h, R, vcv, tBtF = NULL,
   return(list(mu = mean(f), avar = S[1,1] + lambda$fh * (S[1,2] + S[2,1]) 
                                    + lambda$hh * S[2,2]))
 }
-@ %def dmw.calculation
+@ %def dmw_calculation
 
-The function [[dmw.lambda]] calculates the scale terms used to
+The function [[dmw_lambda]] calculates the scale terms used to
 calculate the asymptotic covariance matrix of the \oos\ average, $\bar
 f$.  \citet{Wes:96} derives the formula for the recursive window and
 \citet{WeM:98} for the rolling and fixed windows.
 <<dmw.R>>=
-dmw.lambda <- function(pi, window = c("recursive", "rolling", "fixed")) {
+dmw_lambda <- function(pi, window = c("recursive", "rolling", "fixed")) {
   window <- match.arg(window)
   if (window == "recursive") {
     lambda.fh <- 1 - log(1 + pi)/pi
@@ -134,7 +116,7 @@ dmw.lambda <- function(pi, window = c("recursive", "rolling", "fixed")) {
   }
   return(list(fh = lambda.fh, hh = lambda.hh))
 }
-@ %def dmw.lambda
+@ %def dmw_lambda
 
 \subsection{Clark and West (2006, 2007) test statistic}
 The next statisic is developed in \citet{ClW:06,ClW:07}.  They build
@@ -148,15 +130,15 @@ construct the statistic.
 <<clarkwest.R>>=
 clarkwest <- function(null, alt, dataset, R, vcv = var,
                       window = c("rolling", "recursive", "fixed"))
-  clarkwest.calculation(
-    target        = extract.target(null, dataset),
-    null.forecast = recursive.forecasts(null, dataset, R, window),
-    alt.forecast  = recursive.forecasts(alt, dataset, R, window),
+  clarkwest_calculation(
+    target        = extract_target(null, dataset),
+    null.forecast = recursive_forecasts(null, dataset, R, window),
+    alt.forecast  = recursive_forecasts(alt, dataset, R, window),
     vcv)
 @ %def clarkwest
 
 <<clarkwest.R>>=
-clarkwest.calculation <- function(target, null.forecast, 
+clarkwest_calculation <- function(target, null.forecast, 
                                   alt.forecast, vcv) {
   P <- length(target)
   oos.sequence <- {(target - null.forecast)^2 - 
@@ -167,7 +149,7 @@ clarkwest.calculation <- function(target, null.forecast,
   return(list(mu = mu, avar = avar, 
               pvalue = pnorm(sqrt(P) * mu, 0, sqrt(avar), FALSE)))
 }
-@ %def clarkwest.calculation
+@ %def clarkwest_calculation
 
 \subsection{Mixed window test statistics}
 
@@ -175,29 +157,29 @@ This subsection implements the statistic proposed by \citet{Cal:11b}.
 This statistic uses a recursive window for the benchmark and a
 fixed-length rolling or fixed window for the alternative.  The
 function [[mixedwindow]] is basically a wrapper for
-[[mixedwindow.calculation]].
+[[mixedwindow_calculation]].
 <<mixedwindow.R>>=
 mixedwindow <- function(null, alt, dataset, R, vcv = var,
                         window = c("rolling", "fixed")) {
   nobs <- nrow(dataset)
   estimates <-
-    mixedwindow.calculation(y = extract.target(null, dataset),
-                            X = extract.predictors(null, dataset),
-                            recursive.forecasts(null, dataset, R, "recursive"),
-                            recursive.forecasts(alt, dataset, R, window),
+    mixedwindow_calculation(y = extract_target(null, dataset),
+                            X = extract_predictors(null, dataset),
+                            recursive_forecasts(null, dataset, R, "recursive"),
+                            recursive_forecasts(alt, dataset, R, window),
                             vcv = vcv)
   estimates$pvalue <-
     with(estimates, pnorm(mu, 0, sqrt(avar / (nobs - R)), FALSE))
   return(estimates)
 }
-@ [[mixedwindow.calculation]] constructs the \oos\ processes and then %def mixedwindow
-passes everything to the [[dmw.calculation]] function to generate the
+@ [[mixedwindow_calculation]] constructs the \oos\ processes and then %def mixedwindow
+passes everything to the [[dmw_calculation]] function to generate the
 final statistics.  It might seem a little silly to have
-[[mixedwindow]] and [[mixedwindow.calculation]] as distinct functions,
-but we're going to reuse [[mixedwindow.calculation]] in the bootstrap.
+[[mixedwindow]] and [[mixedwindow_calculation]] as distinct functions,
+but we're going to reuse [[mixedwindow_calculation]] in the bootstrap.
 
 <<mixedwindow.R>>=
-mixedwindow.calculation <- function(y, X, forecasts.null, forecasts.alt, vcv) {
+mixedwindow_calculation <- function(y, X, forecasts.null, forecasts.alt, vcv) {
   X <- as.matrix(X)
   nobs <- length(y)
   noos <- length(forecasts.null)
@@ -205,7 +187,7 @@ mixedwindow.calculation <- function(y, X, forecasts.null, forecasts.alt, vcv) {
   errors.null <- y[oos] - forecasts.null
   errors.alt  <- y[oos] - forecasts.alt
   forecast.differences <- forecasts.null - forecasts.alt
-  dmw.calculation(f = errors.null^2 - errors.alt^2 + forecast.differences^2,
+  dmw_calculation(f = errors.null^2 - errors.alt^2 + forecast.differences^2,
                   h = errors.null * X[oos,,drop = FALSE],
                   R = nobs - noos, vcv = vcv,
                   tBtF = 2 * solve(crossprod(X) / nobs, 
@@ -213,9 +195,9 @@ mixedwindow.calculation <- function(y, X, forecasts.null, forecasts.alt, vcv) {
                                      errors.null) * X[oos,,drop=FALSE])),
                   window = "recursive")
 }
-@ %def mixedwindow.calculation
+@ %def mixedwindow_calculation
 
-The [[mixedbootstrap]] function uses [[mixedwindow.calculation]] to
+The [[mixedbootstrap]] function uses [[mixedwindow_calculation]] to
 implement \citepos{Cal:11b} bootstrap.  I implement the bootstrap by
 generating random indices rather than actually randomizing the data,
 since we have several distinct sequences that we need to bootstrap
@@ -235,16 +217,16 @@ mixedbootstrap <- function(null, alt.list, dataset, R, nboot, blocklength,
   rbootindex <-
     switch(bootstrap,
            moving = function()
-             bootindex.movingblock(nobs - R, blocklength),
+             bootindex_movingblock(nobs - R, blocklength),
            circular = function()
-             bootindex.circularblock(nobs - R, blocklength))
+             bootindex_circularblock(nobs - R, blocklength))
   replicate(nboot, {
     bootindex <- rbootindex()
     extendedindex <- c(seq_len(R), R + bootindex)
     sapply(forecasts.alt, function(alt) {
       estimates <-
-        mixedwindow.calculation(y[extendedindex], X[extendedindex,,drop=FALSE],
-                                recursive.forecasts(null,
+        mixedwindow_calculation(y[extendedindex], X[extendedindex,,drop=FALSE],
+                                recursive_forecasts(null,
                                   dataset[extendedindex,], R, "recursive"),
                                 alt[bootindex], vcv)
       estimates$mu * sqrt((nobs - R) / estimates$avar)
@@ -259,10 +241,10 @@ generate these forecasts.
 nobs <- nrow(dataset)
 window <- match.arg(window)
 bootstrap <- match.arg(bootstrap)
-X <- extract.predictors(null, dataset)
-y <- extract.target(null, dataset)
+X <- extract_predictors(null, dataset)
+y <- extract_target(null, dataset)
 forecasts.alt <- lapply(alt.list, function(m) {
-  recursive.forecasts(m, dataset, R, window)
+  recursive_forecasts(m, dataset, R, window)
 })
 @ 
 
@@ -276,19 +258,19 @@ operation should be done only once (I realize that the time savings
 are basically zero compared to the time it takes to do the estimation,
 but still\dots).
 <<bootindex.R>>=
-bootindex.movingblock <- function(nobs, blocklength) {
+bootindex_movingblock <- function(nobs, blocklength) {
   blockstarts <- sample(seq_len(nobs - blocklength + 1),
                         ceiling(nobs / blocklength))
   as.vector(sapply(blockstarts, function(s)
     s:(s + blocklength - 1)))[1:nobs]
 }
 
-bootindex.circularblock <- function(nobs, blocklength) {
+bootindex_circularblock <- function(nobs, blocklength) {
   blockstarts <- sample(seq_len(nobs), ceiling(nobs / blocklength))
   as.vector(sapply(blockstarts, function(s)
     (s + seq_len(blocklength) - 1) %% nobs + 1))[seq_len(nobs)]
 }
-@ %def bootindex.movingblock bootindex.circularblock
+@ %def bootindex_movingblock bootindex_circularblock
 
 \section{Other functions}
 \subsection{StepM (Romano and Wolf, 2005)} 
@@ -314,12 +296,12 @@ stepm <- function(teststatistics, bootmatrix, level) {
 
 \subsection{Forecast estimation}
 
-The [[recursive.forecasts]] function constructs a sequence of rolling,
+The [[recursive_forecasts]] function constructs a sequence of rolling,
 recursive, or fixed window forecasts using [[model]].  [[model]] must
 be a function that takes subsets of [[dataset]] as an argument and
 returns an object with a [[predict]] method.
-<<recursive.forecasts.R>>=
-recursive.forecasts <- function(model, dataset, R,
+<<recursive_forecasts.R>>=
+recursive_forecasts <- function(model, dataset, R,
                                 window = c("recursive", "rolling", "fixed"),...) {
   window <- match.arg(window)
   n <- nrow(dataset)
@@ -332,25 +314,25 @@ recursive.forecasts <- function(model, dataset, R,
          rolling   = sapply((R+1):n, function(s) getprediction(s-R, s-1, 1)),
          fixed     = getprediction(1, R, 1:(n-R)))
 }                 
-@ %def recursive.forecasts
+@ %def recursive_forecasts
 
 \subsection{Model manipulation}
 
-[[extract.target]] and [[extract.predictors]] are designed to take the
+[[extract_target]] and [[extract_predictors]] are designed to take the
 [[model]] and [[dataset]] arguments that are passed to functions like
 [[mixedwindow]] and return either the predictand or the predictors
 for the [[null]] model.  These quantities are then used to approximate
 the distribution of the \oos\ average.
 <<extract.R>>=
-extract.predictors <- function(model, dataset)
+extract_predictors <- function(model, dataset)
   model.matrix(terms(model(dataset[1,])), data = dataset)
-extract.target <- function(model, dataset) {
+extract_target <- function(model, dataset) {
   target <- model.response(model.frame(terms(model(dataset[1,])), dataset))
   if (is.ts(dataset))
     target <- ts(target, start = start(dataset), frequency = frequency(dataset))
   target
 }
-@ %def extract.predictors extract.target
+@ %def extract_predictors extract_target
 
 \appendix
 
@@ -360,9 +342,9 @@ this package are meant to be accessible to the users (among other things).
 
 <<NAMESPACE>>=
 export(clarkwest, mixedwindow, mixedbootstrap,
-       recursive.forecasts, stepm, dmw.calculation,
-       bootindex.circularblock, bootindex.movingblock, extract.target,
-       extract.predictors)
+       recursive_forecasts, stepm, dmw_calculation,
+       bootindex_circularblock, bootindex_movingblock, extract_target,
+       extract_predictors)
 @
 
 \section{Licensing information for this software}

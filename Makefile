@@ -1,5 +1,5 @@
 package := oosanalysis
-version := 0.2
+version := 0.2.0
 zipfile := $(package)_$(version).tar.gz
 
 RFLAGS   := --vanilla --slave
@@ -23,7 +23,10 @@ install: $(zipfile)
 	sudo R CMD INSTALL $(package)
 	touch $@
 
-$(Rfiles) $(package)/NAMESPACE $(package)/DESCRIPTION: $(package)/noweb/implementation.rnw
+$(package)/DESCRIPTION: DESCRIPTION
+	echo 'Version: $(version)' | cat $< - > $@
+
+$(Rfiles) $(package)/NAMESPACE: $(package)/noweb/implementation.rnw
 	mkdir -p $(package)/R
 	$(notangle) -R$(@F) $< | cpif $@
 %.pdf: %.tex
