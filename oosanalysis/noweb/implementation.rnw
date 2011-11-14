@@ -131,7 +131,7 @@ construct the statistic.
 clarkwest <- function(null, alt, dataset, R, vcv = var,
                       window = c("rolling", "recursive", "fixed"))
   clarkwest_calculation(
-    target        = extract_target(null, dataset),
+    target        = extract_target(null, dataset[-seq_len(R),,drop = FALSE]),
     null.forecast = recursive_forecasts(null, dataset, R, window),
     alt.forecast  = recursive_forecasts(alt, dataset, R, window),
     vcv)
