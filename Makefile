@@ -15,7 +15,7 @@ Rfiles := $(patsubst $(package)/man/%.Rd,$(package)/R/%.R,$(filter-out $(package
 
 all: check build install pdf
 pdf: $(package)/inst/doc/implementation.pdf
-build: $(zipfile)
+build: $(zipfile) pdf
 $(zipfile): check 
 	R CMD build $(package)
 
