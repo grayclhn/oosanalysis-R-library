@@ -385,4 +385,4 @@ along with this program.  If not, see
 \end{document}
 
 % LocalWords:  mixedwindow dmw mixedbootstrap rbootindex blocklength stepm
-% LocalWords:  extendedindex NAMESPACE
+% LocalWords:  extendedindex NAMESPACE clarkwest bootindex
