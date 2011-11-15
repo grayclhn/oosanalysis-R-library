@@ -168,8 +168,8 @@ mixedwindow <- function(null, alt, dataset, R, vcv = var,
                             recursive_forecasts(null, dataset, R, "recursive"),
                             recursive_forecasts(alt, dataset, R, window),
                             vcv = vcv)
-  estimates$pvalue <-
-    with(estimates, pnorm(mu, 0, sqrt(avar / (nobs - R)), FALSE))
+  estimates$tstat <- with(estimates, mu * sqrt((nobs - R) / avar))
+  estimates$pvalue <- pnorm(estimates$tstat, lower.tail = FALSE)
   return(estimates)
 }
 @ [[mixedwindow_calculation]] constructs the \oos\ processes and then %def mixedwindow
