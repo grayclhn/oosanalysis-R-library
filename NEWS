@@ -1,0 +1,5 @@
+version 0.2.0:
+
+This is the first version that I'm going to start trying to care about
+things like a "NEWS" file, decent log messages when I commit, etc.
+The version number is somewhat arbitrary.
