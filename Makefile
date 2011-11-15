@@ -1,5 +1,5 @@
 package := oosanalysis
-version := 0.2.0
+version := 0.2.1
 zipfile := $(package)_$(version).tar.gz
 
 RFLAGS   := --vanilla --slave
@@ -37,6 +37,6 @@ $(package)/inst/doc/implementation.tex: $(package)/noweb/implementation.rnw
 
 # I like this next rule.  The 'check' file depends on every file that's
 # under version control or unknown in the $(package) subdirectory.
-check: pdf $(Rfiles) $(package)/NAMESPACE $(package)/DESCRIPTION $(addprefix $(package)/,$(shell bzr ls $(package)/ -R --unknown -V --kind=file))
+check: $(Rfiles) $(package)/NAMESPACE $(package)/DESCRIPTION $(addprefix $(package)/,$(shell bzr ls $(package)/ -R --unknown -V --kind=file))
 	R CMD check $(package)
 	touch $@
