@@ -1,11 +1,9 @@
 \documentclass[11pt,draft]{article}
-\usepackage{noweb,setspace,amsmath,amsthm,amssymb,microtype,eco,ragged2e}
-\usepackage{hyperref}
-\usepackage[T1]{fontenc}
+\usepackage{noweb,setspace,amsmath,amsthm,amssymb,microtype,ragged2e}
 \usepackage[round]{natbib}
 \usepackage[margin = 1in]{geometry}
 \frenchspacing
-\RaggedRight
+\DeclareMicrotypeAlias{cmor}{cmr}
 \DisableLigatures{family=tt*}
 \noweboptions{longxref}
 \def\nwendcode{\endtrivlist \endgroup}
@@ -34,10 +32,11 @@
 
 \begin{document}
 
-\title{Implementation details: `oosanalysis' package\footnote{Version
-    0.2.0.  Copyright \textcopyright\ 2011 by Gray Calhoun}}
+\title{Implementation details: `oosanalysis'
+  package\footnote{Copyright \textcopyright\ 2011 by Gray Calhoun
+    \texttt{<gcalhoun@iastate.edu>.}}}
 
-\author{Gray Calhoun\\Iowa State University} \date{\today}
+\author{Gray Calhoun\\Iowa State University} \date{Version 0.2.1\\\today}
 
 \maketitle
 
@@ -119,9 +118,9 @@ dmw_lambda <- function(pi, window = c("recursive", "rolling", "fixed")) {
 @ %def dmw_lambda
 
 \subsection{Clark and West (2006, 2007) test statistic}
-The next statisic is developed in \citet{ClW:06,ClW:07}.  They build
-on \citet{Giw:06} by proposing a fixed-length rolling window to get an
-asymptotically normal statistic, but add a correction to the \oos\
+The next statisic is developed in \citet{ClW:06,ClW:07}, who propose
+using a fixed-length rolling window to get an asymptotically normal
+statistic \citep[as in][]{Giw:06}, but add a correction to the \oos\
 average so that it's centered correctly for testing the null that the
 benchmark is an \mds.  I implement it as two functions.  One to
 estimate the \oos\ forecasts for given data and models.  And one to
@@ -173,10 +172,10 @@ mixedwindow <- function(null, alt, dataset, R, vcv = var,
   return(estimates)
 }
 @ [[mixedwindow_calculation]] constructs the \oos\ processes and then %def mixedwindow
-passes everything to the [[dmw_calculation]] function to generate the
+them to the [[dmw_calculation]] function to generate the
 final statistics.  It might seem a little silly to have
 [[mixedwindow]] and [[mixedwindow_calculation]] as distinct functions,
-but we're going to reuse [[mixedwindow_calculation]] in the bootstrap.
+but we reuse [[mixedwindow_calculation]] in the bootstrap.
 
 <<mixedwindow.R>>=
 mixedwindow_calculation <- function(y, X, forecasts.null, forecasts.alt, vcv) {
@@ -205,7 +204,8 @@ jointly (I assume that this is the usual way people do it).  The local
 function [[rbootindex]] takes no arguments, but is defined to generate
 a length [[nobs]] vector with blocks of length [[blocklength]] that
 induces the moving blocks \citep{Kun:89,LiS:92} or circular blocks
-\citep{PoR:92} bootstraps.  The [[extendedindex]] vector automatically
+\citep{PoR:92} bootstraps.  
+The [[extendedindex]] vector automatically
 includes the first [[R]] observations so that the bootstrap population
 mean is equal to the sample mean of the data (for the circular blocks
 bootstrap).
@@ -214,31 +214,26 @@ mixedbootstrap <- function(null, alt.list, dataset, R, nboot, blocklength,
                            vcv = var, window = c("rolling", "fixed"),
                            bootstrap = c("moving", "circular")) {
   <<define [[mixedbootstrap]] local variables>>
-  rbootindex <-
-    switch(bootstrap,
-           moving = function()
-             bootindex_movingblock(nobs - R, blocklength),
-           circular = function()
-             bootindex_circularblock(nobs - R, blocklength))
+  <<define block bootstrap function [[rbootindex]]>>
   replicate(nboot, {
     bootindex <- rbootindex()
     extendedindex <- c(seq_len(R), R + bootindex)
     sapply(forecasts.alt, function(alt) {
-      estimates <-
-        mixedwindow_calculation(y[extendedindex], X[extendedindex,,drop=FALSE],
-                                recursive_forecasts(null,
-                                  dataset[extendedindex,], R, "recursive"),
-                                alt[bootindex], vcv)
-      estimates$mu * sqrt((nobs - R) / estimates$avar)
+      mixedwindow_calculation(y[extendedindex], X[extendedindex,,drop=FALSE],
+                              recursive_forecasts(null,
+                                dataset[extendedindex,], R, "recursive"),
+                              alt[bootindex], vcv)$tstat
   })})
 }
-@ One nice feature of this bootstrap is that it's only necessary to %def mixedbootstrap
+@ %def mixedbootstrap
+One nice feature of this bootstrap is that it's only necessary to
 reestimate the benchmark model.  The alternative models are estimated
 once, and their forecasts are resampled along with the original data.
 The first step in the function is to define local variables and
 generate these forecasts.
 <<define [[mixedbootstrap]] local variables>>=
 nobs <- nrow(dataset)
+noos <- nobs - R
 window <- match.arg(window)
 bootstrap <- match.arg(bootstrap)
 X <- extract_predictors(null, dataset)
@@ -261,16 +256,24 @@ but still\dots).
 bootindex_movingblock <- function(nobs, blocklength) {
   blockstarts <- sample(seq_len(nobs - blocklength + 1),
                         ceiling(nobs / blocklength))
-  as.vector(sapply(blockstarts, function(s)
-    s:(s + blocklength - 1)))[1:nobs]
+  as.vector(sapply(blockstarts, function(s) s:(s + blocklength - 1)))[1:nobs]
 }
 
 bootindex_circularblock <- function(nobs, blocklength) {
   blockstarts <- sample(seq_len(nobs), ceiling(nobs / blocklength))
   as.vector(sapply(blockstarts, function(s)
-    (s + seq_len(blocklength) - 1) %% nobs + 1))[seq_len(nobs)]
+                   (s + seq_len(blocklength) - 1) %% nobs + 1))[seq_len(nobs)]
 }
 @ %def bootindex_movingblock bootindex_circularblock
+
+[[rbootindex]] just chooses between the two boostrap functions
+depending on the argument passed to [[mixedbootstrap]].
+<<define block bootstrap function [[rbootindex]]>>=  
+rbootindex <- switch(bootstrap,
+  moving = function() bootindex_movingblock(noos, blocklength),
+  circular = function() bootindex_circularblock(noos, blocklength))
+@ %def rbootindex
+
 
 \section{Other functions}
 \subsection{StepM (Romano and Wolf, 2005)} 
@@ -281,14 +284,15 @@ multiple models.
 stepm <- function(teststatistics, bootmatrix, level) {
   nstatistics <- length(teststatistics)
   rejected <- rep(FALSE, nstatistics)
-  nrejected.exit <- 0
+  nrejected.endofloop <- 0
   repeat {
-    nrejected.entry <- nrejected.exit
+    nrejected.topofloop <- nrejected.endofloop
     criticalvalue <- quantile(apply(bootmatrix[!rejected,,drop=FALSE],
                                     2, max), 1 - level)
     rejected[teststatistics > criticalvalue] <- TRUE
-    nrejected.exit <- sum(rejected)
-    if (nrejected.exit == nrejected.entry || nrejected.exit == nstatistics) break
+    nrejected.endofloop <- sum(rejected)
+    if (nrejected.endofloop == nrejected.topofloop ||
+        nrejected.endofloop >= nstatistics) break
   }
   return(list(criticalvalue = criticalvalue, rejected = rejected))
 }
@@ -302,7 +306,7 @@ be a function that takes subsets of [[dataset]] as an argument and
 returns an object with a [[predict]] method.
 <<recursive-forecasts.R>>=
 recursive_forecasts <- function(model, dataset, R,
-                                window = c("recursive", "rolling", "fixed"),...) {
+                         window = c("recursive", "rolling", "fixed"),...) {
   window <- match.arg(window)
   n <- nrow(dataset)
   if (R >= n) stop("dataset must have more than R observations")
@@ -326,6 +330,7 @@ the distribution of the \oos\ average.
 <<extract.R>>=
 extract_predictors <- function(model, dataset)
   model.matrix(terms(model(dataset[1,])), data = dataset)
+
 extract_target <- function(model, dataset) {
   target <- model.response(model.frame(terms(model(dataset[1,])), dataset))
   if (is.ts(dataset))
@@ -341,10 +346,9 @@ The [[NAMESPACE]] file specifies which of the functions defined in
 this package are meant to be accessible to the users (among other things).
 
 <<NAMESPACE>>=
-export(clarkwest, mixedwindow, mixedbootstrap,
-       recursive_forecasts, stepm, dmw_calculation,
-       bootindex_circularblock, bootindex_movingblock, extract_target,
-       extract_predictors)
+export(clarkwest, mixedwindow, mixedbootstrap, recursive_forecasts, stepm,
+       dmw_calculation, bootindex_circularblock, bootindex_movingblock,
+       extract_target, extract_predictors)
 @
 
 \section{Licensing information for this software}
@@ -363,15 +367,19 @@ You should have received a copy of the \gnu\ General Public License
 along with this program.  If not, see
 \texttt{<http://www.gnu.org/licenses/>}.
 
-\section{Index}
-
-\subsection{Variables}
-\nowebindex
-\subsection{Chunks}
-\nowebchunks
-
 \bibliography{AllRefs}
 \addcontentsline{toc}{section}{References}
+
+\section*{Index}
+\addcontentsline{toc}{section}{Index}
+
+\subsection*{Functions and variables}
+\addcontentsline{toc}{subsection}{Functions and variables}
+\nowebindex
+
+\subsection*{Code chunks}
+\addcontentsline{toc}{subsection}{Code chunks}
+\nowebchunks
 
 \end{document}
 
