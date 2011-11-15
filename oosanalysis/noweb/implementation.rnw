@@ -220,10 +220,12 @@ mixedbootstrap <- function(null, alt.list, dataset, R, nboot, blocklength,
     bootindex <- rbootindex()
     extendedindex <- c(seq_len(R), R + bootindex)
     sapply(forecasts.alt, function(alt) {
-      mixedwindow_calculation(y[extendedindex], X[extendedindex,,drop=FALSE],
-                              recursive_forecasts(null,
-                                dataset[extendedindex,], R, "recursive"),
-                              alt[bootindex], vcv)$tstat
+      estimates <- mixedwindow_calculation(y[extendedindex],
+                     X[extendedindex,,drop=FALSE],
+                     recursive_forecasts(null, dataset[extendedindex,], 
+                                         R, "recursive"),
+                     alt[bootindex], vcv)
+      with(estimates, mu * sqrt(noos / avar))
   })})
 }
 @ %def mixedbootstrap
