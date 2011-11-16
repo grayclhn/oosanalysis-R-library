@@ -2,7 +2,6 @@
 \usepackage{noweb,setspace,amsmath,amsthm,amssymb,microtype,ragged2e}
 \usepackage[round]{natbib}
 \usepackage[margin = 1in]{geometry}
-\usepackage{hyperref}
 \frenchspacing
 \DeclareMicrotypeAlias{cmor}{cmr}
 \DisableLigatures{family=tt*}
