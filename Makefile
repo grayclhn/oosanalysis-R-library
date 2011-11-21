@@ -2,8 +2,8 @@ package := oosanalysis
 version := 0.2.1
 zipfile := $(package)_$(version).tar.gz
 
-RFLAGS   := --vanilla --slave
-Rscript  := Rscript
+RD := /home/gcalhoun/Desktop/R-devel/build/bin/R
+RR := /home/gcalhoun/Desktop/R-devel/R-2-14-branch/bin/R
 latexmk  := /usr/local/texlive/2011/bin/x86_64-linux/latexmk
 LATEXMKFLAGS := -pdf -silent
 noweave := noweave
@@ -13,14 +13,15 @@ Rfiles := $(patsubst $(package)/man/%.Rd,$(package)/R/%.R,$(filter-out $(package
 
 .PHONY: all build pdf
 
-all: check build install pdf
+all: check install pdf
 pdf: $(package)/inst/doc/implementation.pdf
 build: $(zipfile) pdf
 $(zipfile): check 
-	R CMD build $(package)
+	$(RR) CMD build $(package)
 
-install: $(zipfile)
-	sudo R CMD INSTALL $(package)
+install: check
+	sudo $(RD) CMD INSTALL $(package)
+	sudo $(RR) CMD INSTALL $(package)
 	touch $@
 
 $(package)/DESCRIPTION: DESCRIPTION
@@ -38,5 +39,6 @@ $(package)/inst/doc/implementation.tex: $(package)/noweb/implementation.rnw
 # I like this next rule.  The 'check' file depends on every file that's
 # under version control or unknown in the $(package) subdirectory.
 check: $(Rfiles) $(package)/NAMESPACE $(package)/DESCRIPTION $(addprefix $(package)/,$(shell bzr ls $(package)/ -R --unknown -V --kind=file))
-	R CMD check $(package)
+	$(RD) CMD check $(package)
+	$(RR) CMD check $(package)
 	touch $@
