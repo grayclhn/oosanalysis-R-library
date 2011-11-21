@@ -1,7 +1,7 @@
 \documentclass[11pt]{article}
-\usepackage{noweb,setspace,amsmath,amsthm,amssymb,microtype,ragged2e}
+\usepackage{noweb,setspace,amsmath,amsthm,amssymb,microtype,ragged2e,ae}
 \usepackage[round]{natbib}
-\usepackage[margin = 1in]{geometry}
+\usepackage[top=1.25in,left=1.5in,right=1.5in,bottom=1.5in]{geometry}
 \frenchspacing
 \DeclareMicrotypeAlias{cmor}{cmr}
 \DisableLigatures{family=tt*}
@@ -29,6 +29,14 @@
 \DeclareMathOperator{\p}{Pr}
 \DeclareMathOperator{\ind}{1}
 
+\makeatletter
+\renewcommand\section{\@startsection%
+{section}{1}{0pt}{-\baselineskip}{0.5\baselineskip}%
+{\normalfont\normalsize\bfseries\large\raggedright}}
+\renewcommand\subsection{\@startsection%
+{subsection}{2}{0pt}{-0.5\baselineskip}{0.5\baselineskip}%
+{\normalfont\normalsize\bfseries\small\raggedright}}
+\makeatother
 
 \begin{document}
 
