@@ -42,12 +42,13 @@
 \begin{document}
 
 \title{Implementation details of the `oosanalysis'
-  package\\{\large Supplemental appendix 2 for ``An
+  package.\\{\Large Supplemental appendix 3 for ``An
     asymptotically normal out-of-sample test of equal predictive
-    ability for nested models''}\footnote{Copyright \textcopyright\ 2011 by Gray Calhoun
-    \texttt{<gcalhoun@iastate.edu>.}}}
+    ability for nested models''}}
 
-\author{Gray Calhoun\\Iowa State University} \date{Version 0.2.1\\\today}
+\author{Gray Calhoun\footnote{email:
+    \texttt{gcalhoun@iastate.edu}}\\Iowa State University}
+\date{Version 0.2.1\\\today}
 
 \maketitle
 
@@ -89,6 +90,7 @@ f_{t}(\beta)$, $S$ is the long-run variance of $(f_{t}, h_{t})$, and
 $\lambda$ is a vector of scale factors that depend on the window used.
 
 <<dmw.R>>=
+<<Copyright and licensing>>
 dmw_calculation <- function(f, h, R, vcv, tBtF = NULL, 
                             window = c("recursive", "rolling", "fixed")) {
   noos <- length(f)
@@ -138,6 +140,7 @@ estimate the \oos\ forecasts for given data and models.  And one to
 construct the statistic.
 
 <<clarkwest.R>>=
+<<Copyright and licensing>>
 clarkwest <- function(null, alt, dataset, R, vcv = var,
                       window = c("rolling", "recursive", "fixed"))
   clarkwest_calculation(
@@ -169,6 +172,7 @@ fixed-length rolling or fixed window for the alternative.  The
 function [[mixedwindow]] is basically a wrapper for
 [[mixedwindow_calculation]].
 <<mixedwindow.R>>=
+<<Copyright and licensing>>
 mixedwindow <- function(null, alt, dataset, R, vcv = var,
                         window = c("rolling", "fixed")) {
   nobs <- nrow(dataset)
@@ -266,6 +270,7 @@ operation should be done only once (I realize that the time savings
 are basically zero compared to the time it takes to do the estimation,
 but still\dots).
 <<bootindex.R>>=
+<<Copyright and licensing>>
 bootindex_movingblock <- function(nobs, blocklength) {
   blockstarts <- sample(seq_len(nobs - blocklength + 1),
                         ceiling(nobs / blocklength))
@@ -294,6 +299,7 @@ rbootindex <- switch(bootstrap,
 [[stepm]] implements \citepos{RoW:05} stepdown procedure to test
 multiple models.
 <<stepm.R>>=
+<<Copyright and licensing>>
 stepm <- function(teststatistics, bootmatrix, level) {
   nstatistics <- length(teststatistics)
   rejected <- rep(FALSE, nstatistics)
@@ -318,6 +324,7 @@ recursive, or fixed window forecasts using [[model]].  [[model]] must
 be a function that takes subsets of [[dataset]] as an argument and
 returns an object with a [[predict]] method.
 <<recursive-forecasts.R>>=
+<<Copyright and licensing>>
 recursive_forecasts <- function(model, dataset, R,
                          window = c("recursive", "rolling", "fixed"),...) {
   window <- match.arg(window)
@@ -341,6 +348,7 @@ recursive_forecasts <- function(model, dataset, R,
 for the [[null]] model.  These quantities are then used to approximate
 the distribution of the \oos\ average.
 <<extract.R>>=
+<<Copyright and licensing>>
 extract_predictors <- function(model, dataset)
   model.matrix(terms(model(dataset[1,])), data = dataset)
 
@@ -352,11 +360,110 @@ extract_target <- function(model, dataset) {
 }
 @ %def extract_predictors extract_target
 
-\section{Objects/classes and methods}
+\section{Objects, classes, and methods}
 
 Some of these functions work through the [[predict]] method.  This is
 great if we want to use, for example, \textsc{ols} forecasts; but in
-the empirical section of the paper we also use some nonlinear models 
+the empirical section of the paper we also use some nonlinear models.
+So we'll define [[predict]] methods for those models as well.
+
+The first is a [[predict]] method for \citepos{CaT:08} modification of
+\citepos{GoW:08} \textsc{ols} forecasts: \citet{CaT:08} impose that
+the forecast is nonnegative, arguing that it is implausible for the
+equity premium to be negative.  I'll first make a simple constructor
+function for the [[CT]] class.  There's some very minor error
+checking; just that a [[predict]] method exists for at least one of
+the classes of the argument, [[model]].
+<<Classes.R>>=
+<<Copyright and licensing>>
+CT <- function(model) {
+  <<Check inputs for [[CT]]>>
+  class(model) <- c("CT", class(model))
+  model
+}
+@ %def CT
+
+<<Check inputs for [[CT]]>>=
+  if (!HasMethod(model, "predict"))
+    stop("'model' must have a 'predict' method.")
+@
+
+The prediction method is pretty straightforward: use the [[predictm]]
+method for the original model, 
+but return zero if the forecast is negative.
+<<Classes.R>>=
+predict.CT <- function(object, newdata,...) {
+  predictions <- NextMethod(object, newdata,...)
+  ifelse(predictions > 0, predictions, 0)
+}
+@ %def predict.CT
+If I wanted to develop this object further it would make sense to add
+print, summary, and plot methods (at least), but I'm not going to
+worry about that for now.
+
+I also want to make some objects that will represent aggregate
+forecasts, the average or median of several models, for example.  I'll
+do this by adding an [[Aggregate]] class to a list of models.  Again,
+the constructor comes first.
+<<Classes.R>>=
+Aggregate <- function(model.list, fn) {
+  <<Check inputs to [[Aggregate]]>>
+  class(model.list) <- "Aggregate"
+  attr(model.list, "Aggregator") <- fn
+  model.list
+}
+@ %def Aggregate
+Checking the inputs for [[Aggregate]] is pretty modest for now,
+although I may add more checks if they turn out to be important.
+<<Check inputs to [[Aggregate]]>>=
+if (!is.function(fn)) stop("'fn' must be a function.")
+if (!all(sapply(model.list, function(m) HasMethod(m, "predict"))))
+  stop("Each element of 'model.list' must have a 'predict' method defined.")
+@
+
+The [[predict]] method now just consists of calling [[predict]]
+element-by-element and then combining the forecasts through the
+predefined function.
+<<Classes.R>>=
+predict.Aggregate <- function(object, newdata,...) {
+  <<Forecast with each individual model>>
+  if (nrow(newdata) > 1) {
+    <<Return multiple-horizon aggregate forecasts>>
+  } else {
+    <<Return aggregate single period forecast>>
+  }
+}
+@ %def predict.Aggregate
+
+<<Forecast with each individual model>>=
+arguments <- list(...)
+arguments$newdata <- newdata
+forecasts <- sapply(object, function(model) 
+                    do.call("predict", c(list(object = model), arguments)))
+@
+
+<<Return multiple-horizon aggregate forecasts>>=
+return(apply(forecasts, 1, attr(object, "Aggregator")))
+@
+
+<<Return aggregate single period forecast>>=
+return(attr(object, "Aggregator")(forecasts))
+@
+
+Finally, let's define a fairly simple function that checks whether a
+given function exists for a given S3 class.  I'm sure that such a
+function exists already, but I don't know what it's called.  This
+function is used above to check that different arguments have a
+[[predict]] method defined, but I guess it could be used more generally.
+<<Classes.R>>=
+HasMethod <- function(object, method.name) {
+  sapply(method.name, function(name) {
+    listed.methods <- methods(name)
+    any(sapply(class(object), function(eachclass)
+               length(grep(eachclass, listed.methods))) > 0)
+  })
+}
+@ %def HasMethod
 
 \appendix
 
@@ -365,27 +472,39 @@ The [[NAMESPACE]] file specifies which of the functions defined in
 this package are meant to be accessible to the users (among other things).
 
 <<NAMESPACE>>=
+<<Copyright and licensing>>
 export(clarkwest, mixedwindow, mixedbootstrap, recursive_forecasts, stepm,
        dmw_calculation, bootindex_circularblock, bootindex_movingblock,
-       extract_target, extract_predictors)
+       extract_target, extract_predictors, CT, Aggregate, HasMethod,
+       predict.CT, predict.Aggregate)
 @
 
 \section{Licensing information for this software}
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the \gnu\ General Public License as published by
-the Free Software Foundation, either version 3 of the License, or (at
-your option) any later version.
+This software is available under the \gnu\ \textsc{gpl} 3.  To
+minimize confusion, the following information is inserted into each
+generated file.  The licensing and copyright conditions, obviously,
+apply to this document as well.
+<<Copyright and licensing>>=
+ # This file was automatically generated by noweb from implementation.rnw.
+ # So you should probably not edit it.  Instead, please edit the source
+ # file (implementation.rnw) and see implementation.pdf for documentation.
+  
+ # Copyright (c) 2011 by Gray Calhoun
+ 
+ # This program is free software: you can redistribute it and/or modify
+ # it under the terms of the GNU General Public License as published by
+ # the Free Software Foundation, either version 3 of the License, or (at
+ # your option) any later version.
 
-This program is distributed in the hope that it will be useful, but
-\textsc{without any warranty}; without even the implied warranty of
-\textsc{merchantability} or \textsc{fitness for a particular purpose}.
-See the \gnu\ General Public License for more details.
+ # This program is distributed in the hope that it will be useful, but
+ # WITHOUT ANY WARRANTY; without even the implied warranty of
+ # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ # General Public License for more details.
 
-You should have received a copy of the \gnu\ General Public License
-along with this program.  If not, see
-\texttt{<http://www.gnu.org/licenses/>}.
-
+ # For a copy of the GNU General Public License, please see
+ # <http://www.r-project.org/Licenses/>.
+@ 
 \bibliography{AllRefs}
 \addcontentsline{toc}{section}{References}
 

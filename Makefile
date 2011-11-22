@@ -13,7 +13,7 @@ Rfiles := $(patsubst $(package)/man/%.Rd,$(package)/R/%.R,$(filter-out $(package
 
 .PHONY: all build pdf
 
-all: check install pdf
+all: check install pdf 
 pdf: $(package)/inst/doc/implementation.pdf
 build: $(zipfile) pdf
 $(zipfile): check 
