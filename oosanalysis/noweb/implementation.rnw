@@ -1,13 +1,14 @@
-\documentclass[11pt]{article}
+\documentclass[10pt]{article}
 \usepackage{noweb,setspace,amsmath,amsthm,amssymb,microtype,ragged2e,ae}
 \usepackage[round]{natbib}
-\usepackage[top=1.25in,left=1.5in,right=1.5in,bottom=1.5in]{geometry}
+\usepackage[top=1in,left=1.75in,right=1.75in,bottom=1.25in]{geometry}
 \frenchspacing
 \DeclareMicrotypeAlias{cmor}{cmr}
 \DisableLigatures{family=tt*}
 \noweboptions{longxref}
-\def\nwendcode{\endtrivlist \endgroup}
-\let\nwdocspar=\par
+\let\nowebsize=\small
+% \def\nwendcode{\endtrivlist \endgroup}
+% \let\nwdocspar=\par
 \bibliographystyle{abbrvnat}
 \newcommand\citepos[2][]{\citeauthor{#2}'s \citeyearpar[#1]{#2}}
 
