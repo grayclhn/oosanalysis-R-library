@@ -41,8 +41,10 @@
 
 \begin{document}
 
-\title{Implementation details: `oosanalysis'
-  package\footnote{Copyright \textcopyright\ 2011 by Gray Calhoun
+\title{Implementation details of the `oosanalysis'
+  package\\{\large Supplemental appendix 2 for ``An
+    asymptotically normal out-of-sample test of equal predictive
+    ability for nested models''}\footnote{Copyright \textcopyright\ 2011 by Gray Calhoun
     \texttt{<gcalhoun@iastate.edu>.}}}
 
 \author{Gray Calhoun\\Iowa State University} \date{Version 0.2.1\\\today}
@@ -349,6 +351,12 @@ extract_target <- function(model, dataset) {
   target
 }
 @ %def extract_predictors extract_target
+
+\section{Objects/classes and methods}
+
+Some of these functions work through the [[predict]] method.  This is
+great if we want to use, for example, \textsc{ols} forecasts; but in
+the empirical section of the paper we also use some nonlinear models 
 
 \appendix
 
