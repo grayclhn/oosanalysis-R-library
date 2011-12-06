@@ -536,7 +536,8 @@ this package are meant to be accessible to the users (among other things).
 export(clarkwest, mixedwindow, mixedbootstrap, recursive_forecasts, stepm,
        dmw_calculation, bootindex_circularblock, bootindex_movingblock,
        extract_target, extract_predictors, CT, Aggregate, HasMethod,
-       predict.CT, predict.Aggregate)
+       predict.CT, predict.Aggregate, rvar)
+importFrom(MASS, mvrnorm)
 @
 
 \section{Licensing information for this software}
