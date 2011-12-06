@@ -414,8 +414,8 @@ series, assigns names, and puts them in a data frame that will be
 convenient for regression estimation.
 <<data frame of simulated series>>=
 as.data.frame(do.call("cbind", lapply(1:neq, function(j) {
-    jmatrix <- sapply(nlag:1, function(i) y[(1:nobs) + i, j])
-    colnames(jmatrix) <- c(eqnames[j], paste(eqnames[j], 1:(nlag-1), sep = "L"))
+    jmatrix <- sapply((nlag+1):1, function(i) y[(1:nobs) + i - 1, j])
+    colnames(jmatrix) <- c(eqnames[j], paste(eqnames[j], 1:nlag, sep = "L"))
     jmatrix
   })))
 @ 
