@@ -382,8 +382,8 @@ that will make the Monte Carlo easier.
 rvar <- function(nobs, coefficients, intercept, vcv, 
                  nburn = 1000, y0 = rep(0, nterms)) {
   <<Check and format [[rvar]] arguments>>
-  y <- rbind(matrix(y0, nlag)[nlag:1,], mvrnorm(nobs, rep(0, neq), vcv))
-  for (i in 1:nobs) {
+  y <- rbind(matrix(y0, nlag)[nlag:1,], mvrnorm(nobs + nburn, rep(0, neq), vcv))
+  for (i in 1:(nobs + nburn)) {
     xvec <- as.numeric(y[i + ((nlag-1):0),])
     y[i + nlag,] <-intercept + sapply(coefficients, function(b) 
                                       crossprod(xvec, b)) + y[i + nlag,]
@@ -407,6 +407,7 @@ if (is.null(names(coefficients))) {
 nlag <- nterms %/% neq
 if (!isTRUE(all.equal(nlag * neq, nterms))) 
   stop("The number of lags must be an integer")
+y0 <- as.numeric(y0)
 @ 
 
 The remaining code in this function just reorders the generated
@@ -414,7 +415,7 @@ series, assigns names, and puts them in a data frame that will be
 convenient for regression estimation.
 <<data frame of simulated series>>=
 as.data.frame(do.call("cbind", lapply(1:neq, function(j) {
-    jmatrix <- sapply((nlag+1):1, function(i) y[(1:nobs) + i - 1, j])
+    jmatrix <- sapply((nlag+1):1, function(i) y[(1:nobs) + i + nburn - 1, j])
     colnames(jmatrix) <- c(eqnames[j], paste(eqnames[j], 1:nlag, sep = "L"))
     jmatrix
   })))
