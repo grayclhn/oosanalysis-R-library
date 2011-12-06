@@ -228,37 +228,48 @@ bootstrap).
 mixedbootstrap <- function(null, alt.list, dataset, R, nboot, blocklength,
                            vcv = var, window = c("rolling", "fixed"),
                            bootstrap = c("moving", "circular")) {
-  <<define [[mixedbootstrap]] local variables>>
-  <<define block bootstrap function [[rbootindex]]>>
-  replicate(nboot, {
+  <<Define [[mixedbootstrap]] local variables>>
+  <<Calculate individual test statistics>>
+  <<Define block bootstrap function [[rbootindex]]>>
+  bootstrap.replications <- replicate(nboot, {
     bootindex <- rbootindex()
     extendedindex <- c(seq_len(R), R + bootindex)
     sapply(forecasts.alt, function(alt) {
-      estimates <- mixedwindow_calculation(y[extendedindex],
-                     X[extendedindex,,drop=FALSE],
-                     recursive_forecasts(null, dataset[extendedindex,], 
-                                         R, "recursive"),
-                     alt[bootindex], vcv)
-      with(estimates, mu * sqrt(noos / avar))
+      with(mixedwindow_calculation(y[extendedindex],
+             X[extendedindex,,drop=FALSE],
+             recursive_forecasts(null, dataset[extendedindex,], R, "recursive"),
+             alt[bootindex], vcv),
+           mu * sqrt(noos / avar))
   })})
+  return(list(statistics = test.statistics,
+              replications = bootstrap.replications))
 }
 @ %def mixedbootstrap
+
 One nice feature of this bootstrap is that it's only necessary to
 reestimate the benchmark model.  The alternative models are estimated
 once, and their forecasts are resampled along with the original data.
 The first step in the function is to define local variables and
 generate these forecasts.
-<<define [[mixedbootstrap]] local variables>>=
+<<Define [[mixedbootstrap]] local variables>>=
 nobs <- nrow(dataset)
 noos <- nobs - R
 window <- match.arg(window)
 bootstrap <- match.arg(bootstrap)
 X <- extract_predictors(null, dataset)
 y <- extract_target(null, dataset)
+@ 
+
+<<Calculate individual test statistics>>=
+forecasts.null <- recursive_forecasts(null, dataset, R, "recursive")
 forecasts.alt <- lapply(alt.list, function(m) {
   recursive_forecasts(m, dataset, R, window)
 })
-@ 
+test.statistics <- sapply(forecasts.alt, function(alt) {
+  with(mixedwindow_calculation(y, X, forecasts.null, alt, vcv),
+       mu * sqrt(noos / avar))
+})
+@
 
 The next two functions generate indices that induce the moving blocks
 bootstrap or circular blocks bootstrap.  I prefer to have these as
@@ -286,7 +297,7 @@ bootindex_circularblock <- function(nobs, blocklength) {
 
 [[rbootindex]] just chooses between the two boostrap functions
 depending on the argument passed to [[mixedbootstrap]].
-<<define block bootstrap function [[rbootindex]]>>=  
+<<Define block bootstrap function [[rbootindex]]>>=  
 rbootindex <- switch(bootstrap,
   moving = function() bootindex_movingblock(noos, blocklength),
   circular = function() bootindex_circularblock(noos, blocklength))
@@ -359,6 +370,55 @@ extract_target <- function(model, dataset) {
   target
 }
 @ %def extract_predictors extract_target
+
+\subsection{Data generation}
+I'm also going to define a simple function to generate a new dataset
+from a given VAR model.  The [[coefficients]] argument is a list that
+contains the vector of true coefficient values for each equation and
+the innovations are assumed to be multivariate normal.  I'm going to
+return a data frame with all of the lags listed explicitly, because
+that will make the Monte Carlo easier.
+<<rvar.R>>=
+rvar <- function(nobs, coefficients, intercept, vcv, 
+                 nburn = 1000, y0 = rep(0, nterms)) {
+  <<Check and format [[rvar]] arguments>>
+  y <- rbind(matrix(y0, nlag)[nlag:1,], mvrnorm(nobs, rep(0, neq), vcv))
+  for (i in 1:nobs) {
+    xvec <- as.numeric(y[i + ((nlag-1):0),])
+    y[i + nlag,] <-intercept + sapply(coefficients, function(b) 
+                                      crossprod(xvec, b)) + y[i + nlag,]
+  }
+  return(<<data frame of simulated series>>)
+}
+@ %def rvar
+We just do a few consistency checks on the arguments.  Also, if the
+list of coefficients has names associated with each element, we take
+those to be the names of the series; otherwise we assign generic names.
+<<Check and format [[rvar]] arguments>>=
+nterms <- length(coefficients[[1]])
+if (any(sapply(coefficients[-1], length) != nterms))
+  stop("All of the elememts of 'coefficients' must have the same length")
+neq <- length(coefficients)
+if (is.null(names(coefficients))) {
+  eqnames <- paste("x", seq_len(neq), sep = "") 
+} else {
+  eqnames <- names(coefficients)
+}
+nlag <- nterms %/% neq
+if (!isTRUE(all.equal(nlag * neq, nterms))) 
+  stop("The number of lags must be an integer")
+@ 
+
+The remaining code in this function just reorders the generated
+series, assigns names, and puts them in a data frame that will be
+convenient for regression estimation.
+<<data frame of simulated series>>=
+as.data.frame(do.call("cbind", lapply(1:neq, function(j) {
+    jmatrix <- sapply(nlag:1, function(i) y[(1:nobs) + i, j])
+    colnames(jmatrix) <- c(eqnames[j], paste(eqnames[j], 1:(nlag-1), sep = "L"))
+    jmatrix
+  })))
+@ 
 
 \section{Objects, classes, and methods}
 
