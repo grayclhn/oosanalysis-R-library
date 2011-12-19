@@ -91,10 +91,10 @@ $\lambda$ is a vector of scale factors that depend on the window used.
 
 <<dmw.R>>=
 <<Copyright and licensing>>
-dmw_calculation <- function(f, h, R, vcv, tBtF = NULL, 
+dmw_calculation <- function(f, h, R, vcv, tBtF = NULL, pi = noos / R,
                             window = c("recursive", "rolling", "fixed")) {
   noos <- length(f)
-  lambda <- dmw_lambda(pi = noos / R, window)
+  lambda <- dmw_lambda(pi, window)
   htBtF <- if (is.null(tBtF)) {
     rep(0, noos) 
   } else {
@@ -207,7 +207,7 @@ mixedwindow_calculation <- function(y, X, forecasts.null, forecasts.alt, vcv) {
                   tBtF = 2 * solve(crossprod(X) / nobs, 
                            colMeans((forecast.differences -
                                      errors.null) * X[oos,,drop=FALSE])),
-                  window = "recursive")
+                  pi = Inf, window = "recursive")
 }
 @ %def mixedwindow_calculation
 

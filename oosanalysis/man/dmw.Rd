@@ -15,7 +15,7 @@
 
 
 \usage{
-dmw_calculation(f, h, R, vcv, tBtF = NULL,
+dmw_calculation(f, h, R, vcv, tBtF = NULL, pi = noos / R,
                 window = c("recursive", "rolling", "fixed"))
 }
 \arguments{
@@ -37,6 +37,10 @@ dmw_calculation(f, h, R, vcv, tBtF = NULL,
     known or imposed, instead of estimated, set this argument to
     \code{NULL}}
 
+  \item{pi}{A numeric scalar, the ratio of the number of out-of-sample
+    observations to the number of training sample observations.
+    \code{noos} is defined in the body of the function as \code{length(f)}.}
+  
   \item{window}{A character string indicating which window strategy was
     used to generate the \acronym{oos} observations.}
 }
