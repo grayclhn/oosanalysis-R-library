@@ -2,7 +2,7 @@ auto/
 
 R/*
 oosanalysis/R
-oosanalysis/inst
+oosanalysis/inst/doc
 
 *~
 *.Rout

@@ -113,8 +113,15 @@ f$.  \citet{Wes:96} derives the formula for the recursive window and
 <<dmw.R>>=
 dmw_lambda <- function(pi, window = c("recursive", "rolling", "fixed")) {
   window <- match.arg(window)
+  stopifnot(pi >= 0)
   if (window == "recursive") {
-    lambda.fh <- 1 - log(1 + pi)/pi
+    if (pi >= Inf) {
+      lambda.fh <- 1
+    } else if (pi > 0) {
+      lambda.fh <- 1 - log(1 + pi)/pi
+    } else {
+      lambda.fh <- 0
+    }
     lambda.hh <- 2 * lambda.fh
   } else if (window == "fixed") {
     lambda.fh <- 0
