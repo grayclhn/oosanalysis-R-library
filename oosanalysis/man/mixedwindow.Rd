@@ -6,7 +6,7 @@
   proposed by Calhoun (2011).}
 \usage{
 mixedwindow(null, alt, dataset, R, vcv = var,
-            window = c("rolling", "fixed"))
+            window = c("rolling", "fixed"), pimethod = "estimate")
 
 mixedbootstrap(null, alt.list, dataset, R, nboot, blocklength,
                vcv = var, window = c("rolling", "fixed"),
@@ -32,6 +32,9 @@ mixedbootstrap(null, alt.list, dataset, R, nboot, blocklength,
   \item{window}{A character that indicates the window strategy for
     \acronym{oos} estimation for the alternative model[s].  The
     benchmark model is always estimated with the recursive scheme.}
+  \item{pimethod}{Indicates whether Pi (= lim P/R) should be estimated
+    as P/R (\code{pimethod = "estimate"}) or set to the theoretical limit of
+  infinity (\code{pimethod = "theory"}). }
   \item{bootstrap}{Indicates whether to do the moving blocks bootstrap
     (MBB) (Kunsch, 1989 and Liu and Singh, 1992) or circular blocks
     bootstrap (CBB) (Politis and Romano, 1992)}

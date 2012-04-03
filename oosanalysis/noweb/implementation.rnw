@@ -181,14 +181,15 @@ function [[mixedwindow]] is basically a wrapper for
 <<mixedwindow.R>>=
 <<Copyright and licensing>>
 mixedwindow <- function(null, alt, dataset, R, vcv = var,
-                        window = c("rolling", "fixed")) {
+                        window = c("rolling", "fixed"),
+                        pimethod = "estimate") {
   nobs <- nrow(dataset)
   estimates <-
     mixedwindow_calculation(y = extract_target(null, dataset),
                             X = extract_predictors(null, dataset),
                             recursive_forecasts(null, dataset, R, "recursive"),
                             recursive_forecasts(alt, dataset, R, window),
-                            vcv = vcv)
+                            vcv = vcv, pimethod = pimethod)
   estimates$tstat <- with(estimates, mu * sqrt((nobs - R) / avar))
   estimates$pvalue <- pnorm(estimates$tstat, lower.tail = FALSE)
   return(estimates)
@@ -200,7 +201,8 @@ final statistics.  It might seem a little silly to have
 but we reuse [[mixedwindow_calculation]] in the bootstrap.
 
 <<mixedwindow.R>>=
-mixedwindow_calculation <- function(y, X, forecasts.null, forecasts.alt, vcv) {
+mixedwindow_calculation <- function(y, X, forecasts.null, forecasts.alt, vcv,
+                                    pimethod = "estimate") {
   X <- as.matrix(X)
   nobs <- length(y)
   noos <- length(forecasts.null)
@@ -208,13 +210,16 @@ mixedwindow_calculation <- function(y, X, forecasts.null, forecasts.alt, vcv) {
   errors.null <- y[oos] - forecasts.null
   errors.alt  <- y[oos] - forecasts.alt
   forecast.differences <- forecasts.null - forecasts.alt
+
+  pivalue <- switch(pimethod, estimate = noos / (nobs - noos), theory = Inf,
+                    stop("That choice of 'pi' is unsupported."))
   dmw_calculation(f = errors.null^2 - errors.alt^2 + forecast.differences^2,
                   h = errors.null * X[oos,,drop = FALSE],
                   R = nobs - noos, vcv = vcv,
                   tBtF = 2 * solve(crossprod(X) / nobs, 
                            colMeans((forecast.differences -
                                      errors.null) * X[oos,,drop=FALSE])),
-                  pi = Inf, window = "recursive")
+                  pi = pivalue, window = "recursive")
 }
 @ %def mixedwindow_calculation
 
