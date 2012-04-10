@@ -1,7 +1,7 @@
 Package: oosanalysis
 Type: Package
 Title: Pseudo out-of-sample forecasting
-Date: 2011-01-28
+Date: 2011-12-29
 Author: Gray Calhoun
 Maintainer: Gray Calhoun <gcalhoun@iastate.edu>
 Description: Functions for out-of-sample comparisons of forecasting models
