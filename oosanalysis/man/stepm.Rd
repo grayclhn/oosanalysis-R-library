@@ -4,7 +4,7 @@
 \description{Implements Romano and Wolf's StepM, a stepdown procedure
   for multiple hypothesis testing.}
 \usage{
-stepm(teststatistics, bootmatrix, level)
+stepm(teststatistics, bootmatrix, lefttail, righttail)
 }
 
 \arguments{
@@ -12,7 +12,11 @@ stepm(teststatistics, bootmatrix, level)
   \item{bootmatrix}{A matrix with \code{length(teststatistics)} rows and
     an arbitrary number of columns.  Each column is a different
     draw from the bootstrap-induced distribution of \code{teststatistics}.}
-  \item{level}{The desired confidence level of the test.}
+  \item{lefttail}{The mass to be left in the left tail of the
+  distribution.  Setting this to \code{NA} imposes a one-sided alternative.}
+  \item{righttail}{The mass to be left in the right tail of the
+  distribution.  Setting this to \code{NA} imposes a one-sided
+  alternative.}
 }
 \details{This function assumes that each element of
   \code{teststatistics} tests (say) \eqn{\mu_i = 0}{mu[i] = 0} against
@@ -23,14 +27,17 @@ stepm(teststatistics, bootmatrix, level)
   null hypothesis is controlled at level \code{level}.
 }
 \value{A list with the following elements:
-  \item{criticalvalue}{The estimated critical value.}
-  \item{rejected}{A logical vector indicating which statistcs exceed the
-  critical value.}
+  \item{criticalvalues}{The estimated critical values.}
+  \item{rejected}{A logical vector indicating which statistcs fall outside the
+  critical values.}
 }
 \references{
   Calhoun, G. 2011, Documentation appendix: An asymptotically normal
   out-of-sample test of equal predictive accuracy for nested models.
   Unpublished manuscript.
+
+  Calhoun, G. 2012, A comment on "Stepwise multiple testing as
+  formalized data snooping."  Unpublished manuscript.
 
   Romano, J. P., and Wolf, M. 2005, Stepwise multiple testing as
   formalized data snooping.  \emph{Econometrica}, \bold{73}(4), pages
@@ -49,7 +56,7 @@ dottests <- function(dataset)
 
 stepm(teststatistics = dottests(d),
       bootmatrix = replicate(nboot, dottests(d[sample(1:n, n, replace = TRUE),])),
-      level = 0.05)
+      lefttail = NA, righttail = 0.05)
 }
 
 \keyword{htest}

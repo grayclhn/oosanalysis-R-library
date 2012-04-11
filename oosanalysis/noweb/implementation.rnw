@@ -323,22 +323,44 @@ rbootindex <- switch(bootstrap,
 multiple models.
 <<stepm.R>>=
 <<Copyright and licensing>>
-stepm <- function(teststatistics, bootmatrix, level) {
+stepm <- function(teststatistics, bootmatrix, lefttail, righttail) {
   nstatistics <- length(teststatistics)
   rejected <- rep(FALSE, nstatistics)
   nrejected.endofloop <- 0
   repeat {
     nrejected.topofloop <- nrejected.endofloop
-    criticalvalue <- quantile(apply(bootmatrix[!rejected,,drop=FALSE],
-                                    2, max), 1 - level)
-    rejected[teststatistics > criticalvalue] <- TRUE
+    <<Find critical values and determine which hypotheses are rejected>>
     nrejected.endofloop <- sum(rejected)
     if (nrejected.endofloop == nrejected.topofloop ||
         nrejected.endofloop >= nstatistics) break
   }
-  return(list(criticalvalue = criticalvalue, rejected = rejected))
+  return(list(criticalvalues = criticalvalues, rejected = rejected))
 }
 @ %def stepm
+
+I'm not in love with this sequence of if/else if statements, but it at
+least makes the logic clear.  The code determines which critical
+values to find (left or right) and then which hypotheses we can
+reject based on these critical values.  Setting a tail to [[NA]]
+indicates that we're doing one-sided alternatives.
+<<Find critical values and determine which hypotheses are rejected>>=
+criticalvalues <- 
+  if (!is.na(righttail) && !is.na(lefttail)) {
+    quantile(apply(bootmatrix[!rejected,,drop=FALSE],
+                   2, max), c(lefttail, 1 - righttail))
+  } else if (!is.na(righttail) && is.na(lefttail)) {
+    c(-Inf, quantile(apply(bootmatrix[!rejected,,drop=FALSE],
+                           2, max), 1 - righttail))
+  } else if (is.na(righttail) && !is.na(lefttail)) {
+    c(quantile(apply(bootmatrix[!rejected,,drop=FALSE],
+                     2, max), lefttail), Inf)
+  } else {
+    warning("Setting both tails to NA gives uninformative results")
+    c(-Inf, Inf)
+  }
+rejected[teststatistics < criticalvalues[1] | 
+         teststatistics > criticalvalues[2]] <- TRUE
+@ %def 
 
 \subsection{Forecast estimation}
 
