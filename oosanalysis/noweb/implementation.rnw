@@ -41,10 +41,7 @@
 
 \begin{document}
 
-\title{Implementation details of the `oosanalysis'
-  package.\\{\Large Supplemental appendix 3 for ``An
-    asymptotically normal out-of-sample test of equal predictive
-    ability for nested models''}}
+\title{Implementation details of the `oosanalysis' package.}
 
 \author{Gray Calhoun\footnote{email:
     \texttt{gcalhoun@iastate.edu}}\\Iowa State University}
