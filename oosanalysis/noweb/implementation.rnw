@@ -320,7 +320,8 @@ rbootindex <- switch(bootstrap,
 \subsection{StepM (Romano and Wolf, 2005)} 
 
 [[stepm]] implements \citepos{RoW:05} stepdown procedure to test
-multiple models.
+multiple models and allows for asymmetric two-sided tests as in
+\citet{Cal:11e}.
 <<stepm.R>>=
 <<Copyright and licensing>>
 stepm <- function(teststatistics, bootmatrix, lefttail, righttail) {
@@ -334,32 +335,23 @@ stepm <- function(teststatistics, bootmatrix, lefttail, righttail) {
     if (nrejected.endofloop == nrejected.topofloop ||
         nrejected.endofloop >= nstatistics) break
   }
-  return(list(criticalvalues = criticalvalues, rejected = rejected))
+  return(list(leftcrit = leftcrit, rightcrit = rightcrit, 
+              rejected = rejected))
 }
 @ %def stepm
 
-I'm not in love with this sequence of if/else if statements, but it at
-least makes the logic clear.  The code determines which critical
-values to find (left or right) and then which hypotheses we can
-reject based on these critical values.  Setting a tail to [[NA]]
-indicates that we're doing one-sided alternatives.
+The code determines which critical values to find (left or right) and
+then which hypotheses we can reject based on these critical values.
+Setting a tail to [[NA]] indicates that we're doing one-sided
+alternatives.
 <<Find critical values and determine which hypotheses are rejected>>=
-criticalvalues <- 
-  if (!is.na(righttail) && !is.na(lefttail)) {
-    quantile(apply(bootmatrix[!rejected,,drop=FALSE],
-                   2, max), c(lefttail, 1 - righttail))
-  } else if (!is.na(righttail) && is.na(lefttail)) {
-    c(-Inf, quantile(apply(bootmatrix[!rejected,,drop=FALSE],
-                           2, max), 1 - righttail))
-  } else if (is.na(righttail) && !is.na(lefttail)) {
-    c(quantile(apply(bootmatrix[!rejected,,drop=FALSE],
-                     2, max), lefttail), Inf)
-  } else {
-    warning("Setting both tails to NA gives uninformative results")
-    c(-Inf, Inf)
-  }
-rejected[teststatistics < criticalvalues[1] | 
-         teststatistics > criticalvalues[2]] <- TRUE
+bootmax <- apply(bootmatrix[!rejected,, drop = FALSE], 2, max)
+bootmin <- apply(bootmatrix[!rejected,, drop = FALSE], 2, min)
+rightcrit <- if (is.na(righttail)) Inf else 
+               quantile(bootmax, 1 - righttail)
+leftcrit <- if (is.na(lefttail)) -Inf else 
+              quantile(bootmin[bootmax <= rightcrit], lefttail)
+rejected[teststatistics < leftcrit | teststatistics > rightcrit] <- TRUE
 @ %def 
 
 \subsection{Forecast estimation}
