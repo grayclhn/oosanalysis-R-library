@@ -1,6 +1,7 @@
 \name{bootindex_circularblock}
 \alias{bootindex_circularblock}
 \alias{bootindex_movingblock}
+\alias{bootindex_stationary}
 \title{Indices to induce block bootstraps}
 \description{These functions generate the random indices necessary to
   implement the moving blocks bootstrap (Kunsch, 1989) and the circular
@@ -8,11 +9,13 @@
 \usage{
 bootindex_movingblock(nobs, blocklength)
 bootindex_circularblock(nobs, blocklength)
+bootindex_stationary(nobs, blocklength)
 }
 
 \arguments{
   \item{nobs}{The length of each bootstrap process.}
-  \item{blocklength}{The block length.}
+  \item{blocklength}{The block length or, in the case of the stationary
+  bootstrap, the expected block length.}
 }
 \details{Both the moving blocks bootstrap and the circular blocks
   bootstrap resample from the sequence X = X[1],\dots,X[n] by drawing
@@ -56,11 +59,15 @@ level <- .1
 X <- 2 + arima.sim(n = nobs, list(ma = c(0.5)))
 
 naive <- replicate(nboot, mean(X[sample(1:nobs, nobs, replace = TRUE)])) - mean(X)
-smart <- replicate(nboot, mean(X[bootindex_circularblock(nobs, 5)])) - mean(X)
+smart1 <- replicate(nboot, mean(X[bootindex_circularblock(nobs, 5)])) - mean(X)
+smart2 <- replicate(nboot, mean(X[bootindex_movingblock(nobs, 5)])) - mean(X)
+smart3 <- replicate(nboot, mean(X[bootindex_stationary(nobs, 5)])) - mean(X)
 
 ## corresponding critical values
 quantile(naive, 1 - level)
-quantile(smart, 1 - level)
+quantile(smart1, 1 - level)
+quantile(smart2, 1 - level)
+quantile(smart3, 1 - level)
 
 \dontrun{
 mc <- replicate(300, {

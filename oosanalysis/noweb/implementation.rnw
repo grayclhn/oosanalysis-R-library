@@ -236,9 +236,11 @@ bootstrap).
 <<mixedwindow.R>>=
 mixedbootstrap <- function(null, alt.list, dataset, R, nboot, blocklength,
                            vcv = var, window = c("rolling", "fixed"),
-                           bootstrap = c("moving", "circular")) {
+                           bootstrap = c("moving", "circular", "stationary"),
+                           pimethod = "estimate") {
   <<Define [[mixedbootstrap]] local variables>>
   <<Calculate individual test statistics>>
+  <<Calculate individual bootstrap means>>
   <<Define block bootstrap function [[rbootindex]]>>
   bootstrap.replications <- replicate(nboot, {
     bootindex <- rbootindex()
@@ -247,11 +249,11 @@ mixedbootstrap <- function(null, alt.list, dataset, R, nboot, blocklength,
       with(mixedwindow_calculation(y[extendedindex],
              X[extendedindex,,drop=FALSE],
              recursive_forecasts(null, dataset[extendedindex,], R, "recursive"),
-             alt[bootindex], vcv),
+             alt[bootindex], vcv, pimethod),
            mu * sqrt(noos / avar))
   })})
   return(list(statistics = test.statistics,
-              replications = bootstrap.replications))
+              replications = bootstrap.replications - popmeans.boot))
 }
 @ %def mixedbootstrap
 
@@ -274,10 +276,13 @@ forecasts.null <- recursive_forecasts(null, dataset, R, "recursive")
 forecasts.alt <- lapply(alt.list, function(m) {
   recursive_forecasts(m, dataset, R, window)
 })
-test.statistics <- sapply(forecasts.alt, function(alt) {
+makestats <- function(forecasts.null) sapply(forecasts.alt, function(alt) {
   with(mixedwindow_calculation(y, X, forecasts.null, alt, vcv),
-       mu * sqrt(noos / avar))
+       mu * sqrt(noos / avar), pimethod)
 })
+test.statistics <- makestats(forecasts.null)
+popmeans.boot <- makestats(predict(null(dataset),
+                           newdata = dataset[seq.int(from = R+1, length = noos),]))
 @
 
 The next two functions generate indices that induce the moving blocks
@@ -289,27 +294,60 @@ want to generate a new bootstrap sample.  It seems like that
 operation should be done only once (I realize that the time savings
 are basically zero compared to the time it takes to do the estimation,
 but still\dots).
+
+These functions should almost certainly be moved to C code. 
 <<bootindex.R>>=
 <<Copyright and licensing>>
 bootindex_movingblock <- function(nobs, blocklength) {
   blockstarts <- sample(seq_len(nobs - blocklength + 1),
-                        ceiling(nobs / blocklength))
-  as.vector(sapply(blockstarts, function(s) s:(s + blocklength - 1)))[1:nobs]
+                        ceiling(nobs / blocklength),
+                        replace = TRUE)
+  indices <- 
+    as.vector(sapply(blockstarts, function(s) s:(s + blocklength - 1)))[1:nobs]
+  attr(indices, "starts") <- blockstarts
+  attr(indices, "lengths") <- blocklength
+  indices
 }
 
 bootindex_circularblock <- function(nobs, blocklength) {
-  blockstarts <- sample(seq_len(nobs), ceiling(nobs / blocklength))
-  as.vector(sapply(blockstarts, function(s)
-                   (s + seq_len(blocklength) - 1) %% nobs + 1))[seq_len(nobs)]
+  blockstarts <- sample(seq_len(nobs), ceiling(nobs / blocklength), 
+                        replace = TRUE)
+  indices <- 
+    as.vector(sapply(blockstarts, function(s)
+                     (s + seq_len(blocklength) - 1) %% nobs + 1))[seq_len(nobs)]
+  attr(indices, "starts") <- blockstarts
+  attr(indices, "lengths") <- blocklength
+  indices
 }
-@ %def bootindex_movingblock bootindex_circularblock
+
+bootindex_stationary <- function(nobs, blocklength) {
+  blockstarts <- sample(seq_len(nobs), replace = TRUE) 
+  blocklengths <- rpois(nobs, blocklength)
+  while(sum(blocklengths) < nobs) {
+    blockstarts <- c(blockstarts, sample(seq_len(nobs), replace = TRUE))
+    blocklengths <- c(blocklengths, rpois(nobs, blocklength))
+  }
+  fullblocks <- sum(cumsum(blocklengths) < nobs)
+  blockstarts <- blockstarts[seq_len(fullblocks + 1)]
+  blocklengths <- c(blocklengths[seq_len(fullblocks)],
+                    nobs - sum(blocklengths[seq_len(fullblocks)]))
+  indices <- unlist(sapply(seq_len(fullblocks + 1), function(s)
+                           1 + seq.int(from = blockstarts[s] - 1, 
+                                       length = blocklengths[s]) %% nobs))
+  
+  attr(indices, "starts") <- blockstarts[blocklengths != 0]
+  attr(indices, "lengths") <- blocklengths[blocklengths != 0]
+  indices
+}
+@ %def bootindex_movingblock bootindex_circularblock bootindex_stationary
 
 [[rbootindex]] just chooses between the two boostrap functions
 depending on the argument passed to [[mixedbootstrap]].
 <<Define block bootstrap function [[rbootindex]]>>=  
 rbootindex <- switch(bootstrap,
   moving = function() bootindex_movingblock(noos, blocklength),
-  circular = function() bootindex_circularblock(noos, blocklength))
+  circular = function() bootindex_circularblock(noos, blocklength),
+  stationary = function() bootindex_stationary(noos, blocklength))
 @ %def rbootindex
 
 
@@ -560,7 +598,7 @@ this package are meant to be accessible to the users (among other things).
 export(clarkwest, mixedwindow, mixedbootstrap, recursive_forecasts, stepm,
        dmw_calculation, bootindex_circularblock, bootindex_movingblock,
        extract_target, extract_predictors, CT, Aggregate, HasMethod,
-       predict.CT, predict.Aggregate, rvar)
+       predict.CT, predict.Aggregate, rvar, bootindex_stationary)
 importFrom(MASS, mvrnorm)
 @
 

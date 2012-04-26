@@ -10,7 +10,8 @@ mixedwindow(null, alt, dataset, R, vcv = var,
 
 mixedbootstrap(null, alt.list, dataset, R, nboot, blocklength,
                vcv = var, window = c("rolling", "fixed"),
-               bootstrap = c("moving", "circular"))
+               bootstrap = c("moving", "circular", "stationary"),
+               pimethod = "estimate")
 }
 
 \arguments{
@@ -36,8 +37,9 @@ mixedbootstrap(null, alt.list, dataset, R, nboot, blocklength,
     as P/R (\code{pimethod = "estimate"}) or set to the theoretical limit of
   infinity (\code{pimethod = "theory"}). }
   \item{bootstrap}{Indicates whether to do the moving blocks bootstrap
-    (MBB) (Kunsch, 1989 and Liu and Singh, 1992) or circular blocks
-    bootstrap (CBB) (Politis and Romano, 1992)}
+    (MBB) (Kunsch, 1989 and Liu and Singh, 1992), circular blocks
+    bootstrap (CBB) (Politis and Romano, 1992), or stationary bootstrap
+  (Politis and Romano, 1994)}
 }
 \details{Calhoun's (2011) mixed window \acronym{oos} test is a
   modification of Clark and West's (2006, 2007) that uses a recursive
@@ -88,6 +90,10 @@ mixedbootstrap(null, alt.list, dataset, R, nboot, blocklength,
   Politis, D. N. and Romano, J. P. 1992, A circular block-resampling
   procedure for stationary data, in R. LePage and L. Billard, editors,
   \emph{Exploring the limits of Bootstrap}, John Wiley, pages 263--270.
+
+  Politis, D. N. and Romano, J. P. 1994, The Stationary Bootstrap.
+  \emph{Journal of the American Statistical Association},
+  \bold{89}(428), pages 1303-1313.
 
 }
 \author{Gray Calhoun \email{gcalhoun@iastate.edu}}
