@@ -60,11 +60,11 @@ Probably the most important of the \oos\ statistics is the
 Diebold-Mariano-West test \citep{DiM:95,Wes:96}.  For now, I've just
 written up a bare-bones version of the statistic that requires the
 user to explictly calculate \citepos{Wes:96} variables and pass them
-to the function.  It would be convenient to write another function
-that takes higher-level arguments, but I'm not sure that there's a
-good general way to do that.  The function [[mixedwindow]] does
-provide a higher-level function that then calls this function, so it
-might be a good template if one wants to code up others.
+to the function.  The [[dmw_mse]] function provides a more convenient
+wrapper for the most common use-case.  The function [[mixedwindow]]
+also does provide a higher-level function that then calls this
+function, so it might be a good template if one wants to code up
+others.
 
 The function [[dmw_calculation]] estimates the mean and variance of
 the \oos\ process $f_{t}(\beta)$.  In \citet{WeM:98}, the recursive
@@ -134,7 +134,74 @@ dmw_lambda <- function(pi, window = c("recursive", "rolling", "fixed")) {
 }
 @ %def dmw_lambda
 
-\subsection{Clark and West (2006, 2007) test statistic}
+<<dmw.R>>=
+dmw_mse <- function(null, alt, dataset, R, vcv = var,
+                    window = c("recursive", "rolling", "fixed"),
+                    pimethod = "estimate") {
+
+  y <- extract_target(null, dataset)
+  X <- extract_predictors(null, dataset)
+  forecasts.null <- recursive_forecasts(null, dataset, R, window)
+  forecasts.alt <- recursive_forecasts(alt, dataset, R, window)
+  
+  nobs <- length(y)
+  noos <- length(forecasts.null)
+  oos <- seq.int(to = nobs, length = noos)
+
+  errors.null <- y[oos] - forecasts.null
+  errors.alt  <- y[oos] - forecasts.alt
+
+  pivalue <- switch(pimethod, estimate = noos / (nobs - noos), theory = Inf,
+                    stop("That choice of 'pi' is unsupported."))
+
+  dmw_calculation(f = errors.null^2 - errors.alt^2,
+                  h = errors.null * X[oos,,drop = FALSE],
+                  R = nobs - noos, vcv = vcv, 
+                  pi = pivalue, window = "recursive")
+}
+@ %def dmw_mse
+
+\subsection{\protect\citet{Mcc:07} critical values}
+\citet{Mcc:07} derives critical values for the oos-$t$ test under the
+assumption that the benchmark model is nested in the alternative
+candidate model.  This setup introduces a degeneracy under the null so
+the test statistic is no longer asymptotically normal.  \citet{Mcc:07}
+presents a table of new critical values for the statistic, and the
+[[mccracken_criticalvalue]] function is a simple wrapper that returns
+the appropriate critical value.  The underlying data are defined in
+the Appendix.
+
+<<mccracken.R>>=
+<<Define faster [[findInterval]] function>>
+mccracken_criticalvalue <- 
+  function(pi, k2, size, window = c("recursive", "rolling", "fixed")) {
+    window <- match.arg(window)
+    sizeIndex <- match(size, c(0.90, 0.95, 0.99))
+    pivalue <- findInterval_presorted(pi, PiBounds)
+    McCrackenData[[window]][pivalue,sizeIndex,k2]
+  }
+@ %def mccracken_criticalvalue
+
+The [[findInterval]] function in the base package implements a binary
+search, but performs a few consistency checks that can slow down the
+search.  I've added a version of the function without those
+consistency checks that is faster, but may cause problems if it's used
+recklessly.
+
+<<Define faster [[findInterval]] function>>=
+findInterval_presorted <- 
+ function(x, vec, rightmost.closed = FALSE, all.inside = FALSE) {
+    nx <- length(x)
+    index <- integer(nx)
+    .C("find_interv_vec", xt = as.double(vec), n = length(vec), 
+       x = as.double(x), nx = nx, as.logical(rightmost.closed), 
+       as.logical(all.inside), index, DUP = FALSE, NAOK = TRUE, 
+       PACKAGE = "base")
+    return(index)
+}
+@ %def findInterval_presorted
+
+\subsection{\citet{ClW:06,ClW:07} test statistic}
 The next statisic is developed in \citet{ClW:06,ClW:07}, who propose
 using a fixed-length rolling window to get an asymptotically normal
 statistic \citep[as in][]{Giw:06}, but add a correction to the \oos\
@@ -589,6 +656,111 @@ HasMethod <- function(object, method.name) {
 
 \appendix
 
+\section{Lookup tables for \citet{Mcc:07} critical values}
+
+<<mccrackendata.R>>=
+PiBounds <- c(0, 0.05, 0.15, seq(from = 0.3, to = 1.9, by = .2))
+McCrackenData <- list()
+McCrackenData[["rolling"]] <- array(dim = c(12, 3, 10), dimnames = c("pi", "size", "k2"), 
+  data = 
+  c(2.326,1.875,1.799,1.604, 1.447, 1.340, 1.221, 1.179, 1.098, 1.021, 0.969, 0.882,
+    1.645,1.251,1.117,0.970, 0.859, 0.722, 0.651, 0.575, 0.510, 0.455, 0.382, 0.334,
+    1.280,0.903,0.776,0.637, 0.530, 0.401, 0.317, 0.246, 0.180, 0.136, 0.116, 0.078,
+    2.326,1.959,1.757,1.504, 1.325, 1.180, 1.165, 0.996, 0.953, 0.883, 0.744, 0.640,
+    1.645,1.280,1.105,0.884, 0.753, 0.631, 0.484, 0.401, 0.304, 0.235, 0.166, 0.103,
+    1.280,0.915,0.755,0.569, 0.425, 0.280, 0.155, 0.111, 0.026,-0.050,-0.094,-0.140,
+    2.326,1.860,1.669,1.473, 1.271, 1.076, 0.984, 0.896, 0.773, 0.614, 0.504, 0.431,
+    1.645,1.274,1.088,0.842, 0.667, 0.490, 0.381, 0.251, 0.146, 0.066,-0.016,-0.084,
+    1.280,0.938,0.718,0.521, 0.346, 0.201, 0.064,-0.042,-0.137,-0.224,-0.302,-0.346,
+    2.326,1.905,1.700,1.503, 1.183, 1.003, 0.903, 0.755, 0.656, 0.455, 0.342, 0.234,
+    1.645,1.267,1.087,0.852, 0.585, 0.376, 0.274, 0.136, 0.024,-0.080,-0.173,-0.222,
+    1.280,0.866,0.731,0.494, 0.248, 0.098,-0.047,-0.164,-0.262,-0.362,-0.434,-0.505,
+    2.326,1.881,1.627,1.347, 1.112, 0.927, 0.790, 0.657, 0.504, 0.307, 0.193, 0.123,
+    1.645,1.229,1.034,0.716, 0.479, 0.280, 0.155,-0.019,-0.090,-0.219,-0.329,-0.385,
+    1.280,0.825,0.694,0.402, 0.154,-0.025,-0.168,-0.305,-0.399,-0.508,-0.589,-0.674,
+    2.326,1.826,1.680,1.312, 1.007, 0.850, 0.641, 0.558, 0.336, 0.195, 0.069, 0.017,
+    1.645,1.176,0.966,0.621, 0.407, 0.225, 0.058,-0.119,-0.218,-0.336,-0.428,-0.535,
+    1.280,0.811,0.602,0.319, 0.088,-0.095,-0.262,-0.423,-0.523,-0.638,-0.732,-0.821,
+    2.326,1.842,1.620,1.233, 0.989, 0.751, 0.526, 0.485, 0.227, 0.055,-0.039,-0.127,
+    1.645,1.154,0.936,0.628, 0.346, 0.171,-0.011,-0.182,-0.320,-0.433,-0.531,-0.663,
+    1.280,0.791,0.573,0.279, 0.038,-0.157,-0.326,-0.497,-0.611,-0.750,-0.841,-0.933,
+    2.326,1.819,1.582,1.178, 0.918, 0.702, 0.466, 0.349, 0.132,-0.018,-0.176,-0.302,
+    1.645,1.157,0.924,0.562, 0.258, 0.081,-0.099,-0.281,-0.432,-0.552,-0.672,-0.785,
+    1.280,0.758,0.541,0.244,-0.042,-0.244,-0.408,-0.576,-0.727,-0.838,-0.957,-1.040,
+    2.326,1.768,1.510,1.110, 0.845, 0.600, 0.408, 0.235, 0.036,-0.099,-0.277,-0.407,
+    1.645,1.117,0.892,0.504, 0.213, 0.021,-0.156,-0.374,-0.529,-0.623,-0.785,-0.885,
+    1.280,0.742,0.520,0.193,-0.105,-0.322,-0.491,-0.657,-0.803,-0.951,-1.049,-1.153,
+    2.326,1.713,1.428,1.075, 0.808, 0.536, 0.298, 0.122,-0.064,-0.248,-0.381,-0.482,
+    1.645,1.068,0.872,0.443, 0.133,-0.038,-0.258,-0.466,-0.605,-0.765,-0.909,-1.011,
+    1.280,0.727,0.500,0.138,-0.144,-0.374,-0.568,-0.757,-0.902,-1.045,-1.167,-1.288))
+
+McCrackenData[["recursive"]] <- array(dim = c(12, 3, 10), dimnames = c("pi", "size", "k2"), 
+  data =
+  c(2.326,1.921,1.784,1.625,1.515, 1.462, 1.436, 1.413, 1.343, 1.316, 1.274, 1.238,
+    1.645,1.245,1.111,0.994,0.971, 0.863, 0.771, 0.740, 0.705, 0.671, 0.638, 0.610,
+    1.280,0.885,0.780,0.657,0.598, 0.512, 0.443, 0.402, 0.370, 0.330, 0.306, 0.281,
+    2.326,1.986,1.856,1.563,1.436, 1.387, 1.312, 1.276, 1.196, 1.158, 1.127, 1.074,
+    1.645,1.274,1.140,0.986,0.868, 0.782, 0.704, 0.623, 0.596, 0.537, 0.507, 0.478,
+    1.280,0.932,0.786,0.614,0.541, 0.455, 0.361, 0.295, 0.253, 0.235, 0.194, 0.160,
+    2.326,1.840,1.737,1.542,1.448, 1.359, 1.252, 1.148, 1.071, 0.976, 0.978, 0.953,
+    1.645,1.300,1.120,0.968,0.808, 0.685, 0.610, 0.552, 0.496, 0.438, 0.419, 0.386,
+    1.280,0.939,0.751,0.551,0.454, 0.356, 0.279, 0.222, 0.175, 0.108, 0.074, 0.035,
+    2.326,1.872,1.731,1.581,1.365, 1.195, 1.119, 1.108, 1.041, 0.902, 0.861, 0.854,
+    1.645,1.264,1.101,0.914,0.772, 0.609, 0.502, 0.419, 0.345, 0.285, 0.239, 0.221,
+    1.280,0.898,0.742,0.562,0.419, 0.263, 0.169, 0.094, 0.052,-0.014,-0.054,-0.106,
+    2.326,1.849,1.679,1.468,1.242, 1.095, 0.995, 0.979, 0.913, 0.795, 0.732, 0.677,
+    1.645,1.222,1.061,0.849,0.689, 0.491, 0.386, 0.308, 0.224, 0.148, 0.107, 0.081,
+    1.280,0.866,0.694,0.461,0.315, 0.179, 0.062,-0.021,-0.083,-0.145,-0.174,-0.228,
+    2.326,1.836,1.639,1.390,1.200, 1.042, 0.943, 0.859, 0.755, 0.686, 0.610, 0.593,
+    1.645,1.192,0.998,0.768,0.615, 0.429, 0.328, 0.259, 0.141, 0.078, 0.055,-0.019,
+    1.280,0.823,0.642,0.394,0.256, 0.108,-0.011,-0.101,-0.164,-0.218,-0.266,-0.319,
+    2.326,1.836,1.649,1.341,1.154, 0.994, 0.872, 0.810, 0.637, 0.549, 0.476, 0.438,
+    1.645,1.199,0.976,0.742,0.546, 0.372, 0.279, 0.191, 0.072,-0.002,-0.034,-0.105,
+    1.280,0.811,0.615,0.359,0.213, 0.062,-0.088,-0.152,-0.230,-0.305,-0.363,-0.449,
+    2.326,1.789,1.659,1.298,1.090, 0.879, 0.788, 0.728, 0.503, 0.444, 0.401, 0.359,
+    1.645,1.193,0.928,0.677,0.462, 0.302, 0.198, 0.105, 0.020,-0.058,-0.101,-0.176,
+    1.280,0.773,0.574,0.329,0.139, 0.003,-0.131,-0.203,-0.293,-0.383,-0.452,-0.516,
+    2.326,1.813,1.607,1.268,1.112, 0.804, 0.724, 0.634, 0.523, 0.427, 0.391, 0.305,
+    1.645,1.112,0.912,0.617,0.397, 0.276, 0.121, 0.030,-0.055,-0.122,-0.193,-0.257,
+    1.280,0.733,0.561,0.273,0.096,-0.068,-0.187,-0.286,-0.377,-0.437,-0.518,-0.579,
+    2.326,1.743,1.534,1.193,1.035, 0.758, 0.621, 0.506, 0.419, 0.347, 0.285, 0.185,
+    1.645,1.082,0.890,0.566,0.358, 0.205, 0.043,-0.072,-0.162,-0.222,-0.296,-0.339,
+    1.280,0.749,0.529,0.226,0.032,-0.130,-0.248,-0.355,-0.454,-0.524,-0.591,-0.651))
+
+McCrackenData[["fixed"]] <- array(dim = c(12, 3, 10), dimnames = c("pi", "size", "k2"), 
+  data =
+  c(2.326,2.201,2.051,1.974,2.061, 2.037, 2.024, 1.992, 2.018, 1.996, 2.016, 1.993,
+    1.645,1.506,1.416,1.364,1.428, 1.346, 1.252, 1.301, 1.293, 1.249, 1.235, 1.218,
+    1.280,1.149,1.079,1.042,1.040, 0.976, 0.917, 0.896, 0.893, 0.908, 0.834, 0.862,
+    2.326,2.145,2.089,1.923,1.947, 1.964, 1.749, 1.751, 1.665, 1.725, 1.646, 1.613,
+    1.645,1.468,1.342,1.301,1.265, 1.164, 1.072, 1.034, 1.046, 0.977, 0.982, 0.955,
+    1.280,1.096,0.999,0.901,0.873, 0.798, 0.711, 0.680, 0.639, 0.578, 0.556, 0.520,
+    2.326,2.045,1.977,1.957,1.805, 1.739, 1.602, 1.520, 1.597, 1.463, 1.513, 1.407,
+    1.645,1.432,1.277,1.195,1.095, 1.014, 0.909, 0.893, 0.851, 0.761, 0.735, 0.733,
+    1.280,1.063,0.922,0.793,0.705, 0.621, 0.540, 0.511, 0.455, 0.386, 0.373, 0.306,
+    2.326,2.013,1.883,1.829,1.687, 1.528, 1.467, 1.475, 1.422, 1.318, 1.255, 1.277,
+    1.645,1.369,1.281,1.110,0.997, 0.883, 0.755, 0.689, 0.650, 0.607, 0.566, 0.509,
+    1.280,1.004,0.895,0.764,0.575, 0.476, 0.367, 0.340, 0.273, 0.204, 0.171, 0.081,
+    2.326,1.930,1.878,1.716,1.596, 1.405, 1.254, 1.301, 1.230, 1.171, 1.115, 1.034,
+    1.645,1.333,1.193,1.009,0.863, 0.725, 0.646, 0.570, 0.486, 0.410, 0.365, 0.291,
+    1.280,0.945,0.838,0.636,0.487, 0.374, 0.258, 0.193, 0.115, 0.020,-0.022,-0.085,
+    2.326,1.933,1.874,1.628,1.481, 1.382, 1.146, 1.188, 1.091, 1.016, 1.007, 0.878,
+    1.645,1.269,1.122,0.936,0.771, 0.652, 0.538, 0.487, 0.367, 0.314, 0.222, 0.152,
+    1.280,0.912,0.764,0.552,0.400, 0.299, 0.169, 0.103, 0.003,-0.106,-0.146,-0.235,
+    2.326,1.925,1.859,1.556,1.377, 1.257, 1.105, 1.103, 0.987, 0.896, 0.828, 0.765,
+    1.645,1.263,1.086,0.878,0.692, 0.557, 0.446, 0.346, 0.254, 0.191, 0.074, 0.014,
+    1.280,0.895,0.731,0.513,0.332, 0.215, 0.060,-0.003,-0.147,-0.252,-0.308,-0.386,
+    2.326,1.856,1.827,1.467,1.245, 1.146, 1.029, 0.980, 0.860, 0.786, 0.762, 0.666,
+    1.645,1.249,1.064,0.807,0.623, 0.481, 0.363, 0.268, 0.151, 0.054,-0.042,-0.120,
+    1.280,0.868,0.663,0.467,0.247, 0.153,-0.029,-0.115,-0.227,-0.343,-0.440,-0.502,
+    2.326,1.878,1.697,1.440,1.198, 1.124, 0.902, 0.791, 0.683, 0.644, 0.595, 0.507,
+    1.645,1.197,1.031,0.754,0.537, 0.416, 0.305, 0.162, 0.050,-0.067,-0.171,-0.242,
+    1.280,0.844,0.655,0.396,0.182, 0.034,-0.111,-0.224,-0.303,-0.437,-0.543,-0.625,
+    2.326,1.824,1.604,1.354,1.126, 0.998, 0.797, 0.659, 0.557, 0.550, 0.505, 0.415,
+    1.645,1.143,1.007,0.688,0.455, 0.337, 0.167, 0.040,-0.057,-0.174,-0.246,-0.358,
+    1.280,0.797,0.616,0.348,0.125,-0.055,-0.210,-0.305,-0.398,-0.559,-0.645,-0.729))
+@ %def McCrackenData PiBounds
+
 \section{Namespace}
 The [[NAMESPACE]] file specifies which of the functions defined in
 this package are meant to be accessible to the users (among other things).
@@ -598,7 +770,7 @@ this package are meant to be accessible to the users (among other things).
 export(clarkwest, mixedwindow, mixedbootstrap, recursive_forecasts, stepm,
        dmw_calculation, bootindex_circularblock, bootindex_movingblock,
        extract_target, extract_predictors, CT, Aggregate, HasMethod,
-       predict.CT, predict.Aggregate, rvar, bootindex_stationary)
+       predict.CT, predict.Aggregate, rvar, bootindex_stationary, mccracken_criticalvalue)
 importFrom(MASS, mvrnorm)
 @
 

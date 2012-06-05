@@ -10,7 +10,9 @@ LATEXMKFLAGS := -pdf -silent
 noweave := /usr/bin/noweave
 notangle:= /usr/bin/notangle
 
-Rfiles := $(patsubst $(package)/man/%.Rd,$(package)/R/%.R,$(filter-out $(package)/man/nobs-methods.Rd,$(wildcard $(package)/man/*.Rd)))
+Rfiles := $(patsubst $(package)/man/%.Rd,$(package)/R/%.R,\
+$(filter-out $(package)/man/mccrackendata.Rd $(package)/man/nobs-methods.Rd,$(wildcard $(package)/man/*.Rd)))
+Datafiles := $(package)/data/mccrackendata.R
 
 .PHONY: all build pdf
 
@@ -29,9 +31,10 @@ install: check
 $(package)/DESCRIPTION: DESCRIPTION
 	echo 'Version: $(version)' | cat $< - > $@
 
-$(Rfiles) $(package)/NAMESPACE: $(package)/noweb/implementation.rnw
-	mkdir -p $(package)/R
+$(Rfiles) $(Datafiles) $(package)/NAMESPACE: $(package)/noweb/implementation.rnw
+	mkdir -p $(@D)
 	$(notangle) -R$(@F) $< | cpif $@
+
 %.pdf: %.tex
 	cd $(dir $<) && $(latexmk) $(LATEXMKFLAGS) $(<F)
 $(package)/inst/doc/implementation.tex: $(package)/noweb/implementation.rnw
@@ -40,6 +43,6 @@ $(package)/inst/doc/implementation.tex: $(package)/noweb/implementation.rnw
 
 # I like this next rule.  The 'check' file depends on every file that's
 # under version control or unknown in the $(package) subdirectory.
-check: pdf $(Rfiles) $(package)/NAMESPACE $(package)/DESCRIPTION $(filter-out .gitignore Makefile,$(shell git ls-tree -r --name-only HEAD))
+check: pdf $(Rfiles) $(Datafiles) $(package)/NAMESPACE $(package)/DESCRIPTION $(filter-out .gitignore Makefile,$(shell git ls-tree -r --name-only HEAD))
 	$(RR) CMD check $(package)
 	touch $@

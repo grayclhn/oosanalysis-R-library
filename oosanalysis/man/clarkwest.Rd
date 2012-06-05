@@ -82,7 +82,9 @@ clarkwest_calculation(target, null.forecast, alt.forecast, vcv)
 \author{Gray Calhoun \email{galhoun@iastate.edu}}
 
 \seealso{\code{\link{dmw_calculation}}, \code{\link{mixedwindow}},
+  \code{\link{mccracken_criticalvalue}},
   \code{\link{recursive_forecasts}}, \code{\link{predict}}}
+
 \examples{
 x <- rnorm(100)
 d <- data.frame(y = x + rnorm(100), x = x)
