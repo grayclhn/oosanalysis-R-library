@@ -781,7 +781,8 @@ this package are meant to be accessible to the users (among other things).
 export(clarkwest, mixedwindow, mixedbootstrap, recursive_forecasts, stepm,
        dmw_calculation, bootindex_circularblock, bootindex_movingblock,
        extract_target, extract_predictors, CT, Aggregate, HasMethod,
-       predict.CT, predict.Aggregate, rvar, bootindex_stationary, mccracken_criticalvalue)
+       predict.CT, predict.Aggregate, rvar, bootindex_stationary, 
+       mccracken_criticalvalue, dmw_mse)
 importFrom(MASS, mvrnorm)
 @
 
