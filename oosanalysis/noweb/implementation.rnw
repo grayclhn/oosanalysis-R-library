@@ -136,8 +136,7 @@ dmw_lambda <- function(pi, window = c("recursive", "rolling", "fixed")) {
 
 <<dmw.R>>=
 dmw_mse <- function(null, alt, dataset, R, vcv = var,
-                    window = c("recursive", "rolling", "fixed"),
-                    pimethod = "estimate") {
+                    window = c("recursive", "rolling", "fixed")) {
 
   y <- extract_target(null, dataset)
   X <- extract_predictors(null, dataset)
@@ -151,13 +150,10 @@ dmw_mse <- function(null, alt, dataset, R, vcv = var,
   errors.null <- y[oos] - forecasts.null
   errors.alt  <- y[oos] - forecasts.alt
 
-  pivalue <- switch(pimethod, estimate = noos / (nobs - noos), theory = Inf,
-                    stop("That choice of 'pi' is unsupported."))
-
   dmw_calculation(f = errors.null^2 - errors.alt^2,
                   h = errors.null * X[oos,,drop = FALSE],
                   R = nobs - noos, vcv = vcv, 
-                  pi = pivalue, window = "recursive")
+                  pi = noos / (nobs - noos), window = "recursive")
 }
 @ %def dmw_mse
 

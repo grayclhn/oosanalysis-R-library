@@ -22,8 +22,7 @@
   
 \usage{
 dmw_mse(null, alt, dataset, R, vcv = var,
-        window = c("recursive", "rolling", "fixed"),
-        pimethod = "estimate")
+        window = c("recursive", "rolling", "fixed"))
 
 dmw_calculation(f, h, R, vcv, tBtF = NULL, pi = noos / R,
                 window = c("recursive", "rolling", "fixed"))
