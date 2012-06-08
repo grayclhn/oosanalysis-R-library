@@ -40,12 +40,11 @@
 \makeatother
 
 \begin{document}
-
+\input{version}
 \title{Implementation details of the `oosanalysis' package.}
 
 \author{Gray Calhoun\footnote{email:
     \texttt{gcalhoun@iastate.edu}}\\Iowa State University}
-\date{Version 0.2.1\\December 29, 2011}
 
 \maketitle
 

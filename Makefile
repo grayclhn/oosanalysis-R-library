@@ -14,11 +14,14 @@ Rfiles := $(patsubst $(package)/man/%.Rd,$(package)/R/%.R,\
 $(filter-out $(package)/man/mccrackendata.Rd $(package)/man/nobs-methods.Rd,$(wildcard $(package)/man/*.Rd)))
 Datafiles := $(package)/data/mccrackendata.R
 
-.PHONY: all build pdf
+.PHONY: all build pdf versionburn
 
 all: check install pdf 
 pdf: $(package)/inst/doc/implementation.pdf
 build: $(zipfile) pdf
+versionburn: 
+	rm -rf $(package)/inst/doc/version.tex $(package)/DESCRIPTION
+
 $(zipfile): check 
 	cd $(package)/inst/doc && $(latexmk) -c implementation.tex
 	$(RR) CMD build $(package)
@@ -35,8 +38,12 @@ $(Rfiles) $(Datafiles) $(package)/NAMESPACE: $(package)/noweb/implementation.rnw
 	mkdir -p $(@D)
 	$(notangle) -R$(@F) $< | cpif $@
 
+$(package)/inst/doc/version.tex: 
+	echo '\date{Version $(version)}' > $@
+
 %.pdf: %.tex
 	cd $(dir $<) && $(latexmk) $(LATEXMKFLAGS) $(<F)
+$(package)/inst/doc/implementation.pdf: $(package)/inst/doc/version.tex
 $(package)/inst/doc/implementation.tex: $(package)/noweb/implementation.rnw
 	mkdir -p $(package)/inst/doc
 	$(noweave) -latex -index -delay $< | sed /^#/d | cpif $@
