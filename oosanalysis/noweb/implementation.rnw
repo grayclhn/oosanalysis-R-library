@@ -150,10 +150,13 @@ dmw_mse <- function(null, alt, dataset, R, vcv = var,
   errors.null <- y[oos] - forecasts.null
   errors.alt  <- y[oos] - forecasts.alt
 
-  dmw_calculation(f = errors.null^2 - errors.alt^2,
-                  h = errors.null * X[oos,,drop = FALSE],
-                  R = nobs - noos, vcv = vcv, 
-                  pi = noos / (nobs - noos), window = "recursive")
+  estimates <- dmw_calculation(f = errors.null^2 - errors.alt^2,
+                               h = errors.null * X[oos,,drop = FALSE],
+                               R = nobs - noos, vcv = vcv, 
+                               pi = noos / (nobs - noos), window = "recursive")
+  estimates$tstat <- with(estimates, mu * sqrt((nobs - R) / avar))
+  estimates$pvalue <- pnorm(estimates$tstat, lower.tail = FALSE)
+  return(estimates)
 }
 @ %def dmw_mse
 
