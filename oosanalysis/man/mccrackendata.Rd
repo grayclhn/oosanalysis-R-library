@@ -2,6 +2,7 @@
 \docType{data}
 \alias{McCrackenData}
 \alias{PiBounds}
+\alias{PiIntervals}
 \title{Critical values for oos-t test from McCracken (2007)}
 \description{
   This data set reproduces tables 1, 2, and 3 from McCracken (2007).
