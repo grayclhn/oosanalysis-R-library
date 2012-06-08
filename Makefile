@@ -1,5 +1,5 @@
 package := oosanalysis
-version := 0.2.2
+version := 0.3.0
 zipfile := $(package)_$(version).tar.gz
 
 SHELL = /bin/bash

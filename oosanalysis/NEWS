@@ -1,12 +1,26 @@
+version 0.3.0:
+
+- Reworded the titles of some of the package files to reflect that
+  it's a stand alone document now.
+- Added the stationary bootstrap.
+- Fixed a bug in centering the mixedbootstrap.
+- Added a convenience wrapper to the DMW OOS t-test
+- Added critical values for McCracken's (2007) oos-t 
+- Added support for asymmetric two-sided testing in StepM (as in
+  Calhoun 2011) 
+- Gave users the option of estimating pi or setting it tin Inf in
+  mixedwindow.
+
+version 0.2.2:
+
+- Fixed a bug in the Makefile dependency
+
 version 0.2.1:
 
-Fixed a bug in mixedbootstrap that causes it to return all NULL entries.
-
-Changed mixedwindow to use pi = Inf instead of the estimated value
-
-Updated code to simulate from VARs
-
-Fixed dmw_lambda so that it works with pi = 0 or Inf
+- Fixed a bug in mixedbootstrap that causes it to return all NULL entries.
+- Changed mixedwindow to use pi = Inf instead of the estimated value
+- Updated code to simulate from VARs
+- Fixed dmw_lambda so that it works with pi = 0 or Inf
 
 version 0.2.0:
 
