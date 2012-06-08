@@ -4,7 +4,7 @@
 \description{This function retrieves the critical values for the oos-t
   test statistic derived by McCracken (2007) for nested models.}
 \usage{
-mccracken_criticalvalue(pi, k2, size, window = c("recursive", "rolling", "fixed"))
+mccracken_criticalvalue(pi, k2, confidence, window = c("recursive", "rolling", "fixed"))
 }
 \arguments{
   \item{pi}{P/R where P is the number of out-of-sample observations and
@@ -12,7 +12,7 @@ mccracken_criticalvalue(pi, k2, size, window = c("recursive", "rolling", "fixed"
     to the closest value in McCracken's table; if you want to
     interpolate between listed values, you must do so manually.}
   \item{k2}{The number of additional regressors in the larger model.}
-  \item{size}{The asymptotic nominal size of the test; this must be
+  \item{confidence}{One minus the asymptotic nominal size of the test; this must be
     0.90, 0.95, or 0.99.}
   \item{window}{The OOS window scheme.}
 }
