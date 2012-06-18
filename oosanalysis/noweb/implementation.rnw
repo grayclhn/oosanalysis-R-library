@@ -174,7 +174,7 @@ the Appendix.
 mccracken_criticalvalue <- 
   function(pi, k2, confidence, window = c("recursive", "rolling", "fixed")) {
     window <- match.arg(window)
-    confidenceIndex <- match(confidence, c(0.90, 0.95, 0.99))
+    confidenceIndex <- match(confidence, c(0.99, 0.95, 0.90))
     if (pi <= PiBounds[1]) {
       return(McCrackenData[[window]][1, confidenceIndex, k2])
     } else if (pi >= PiBounds[2]) {
