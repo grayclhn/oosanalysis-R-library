@@ -460,9 +460,10 @@ bootmin <- apply(bootmatrix[!rejected,, drop = FALSE], 2, min)
 rightcrit <- if (is.na(righttail)) Inf else 
                quantile(bootmax, 1 - righttail)
 leftcrit <- if (is.na(lefttail)) -Inf else 
-              quantile(bootmin[bootmax <= rightcrit], lefttail)
+              quantile(bootmin[bootmax <= rightcrit], 
+                       lefttail / (1 - righttail))
 rejected[teststatistics < leftcrit | teststatistics > rightcrit] <- TRUE
-@ %def 
+@ 
 
 \subsection{Forecast estimation}
 
