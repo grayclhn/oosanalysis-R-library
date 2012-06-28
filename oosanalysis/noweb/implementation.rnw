@@ -253,8 +253,7 @@ function [[mixedwindow]] is basically a wrapper for
 <<mixedwindow.R>>=
 <<Copyright and licensing>>
 mixedwindow <- function(null, alt, dataset, R, vcv = var,
-                        window = c("rolling", "fixed"),
-                        pimethod = "estimate") {
+                        window = c("rolling", "fixed")) {
   nobs <- nrow(dataset)
   estimates <-
     mixedwindow_calculation(y = extract_target(null, dataset),
@@ -289,8 +288,7 @@ mixedwindow_calculation <- function(y, X, forecasts.null, forecasts.alt, vcv,
                   h = errors.null * X[oos,,drop = FALSE],
                   R = nobs - noos, vcv = vcv,
                   tBtF = 2 * solve(crossprod(X) / nobs, 
-                           colMeans((forecast.differences -
-                                     errors.null) * X[oos,,drop=FALSE])),
+                           colMeans(forecast.differences * X[oos,,drop=FALSE])),
                   pi = pivalue, window = "recursive")
 }
 @ %def mixedwindow_calculation
