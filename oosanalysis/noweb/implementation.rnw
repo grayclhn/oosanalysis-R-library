@@ -250,10 +250,10 @@ This statistic uses a recursive window for the benchmark and a
 fixed-length rolling or fixed window for the alternative.  The
 function [[mixedwindow]] is basically a wrapper for
 [[mixedwindow_calculation]].
-<<mixedwindow.R>>=
+<<dmw.R>>=
 <<Copyright and licensing>>
 mixedwindow <- function(null, alt, dataset, R, vcv = var,
-                        window = c("rolling", "fixed")) {
+                      window = c("rolling", "fixed"), pimethod = "estimate") {
   nobs <- nrow(dataset)
   estimates <-
     mixedwindow_calculation(y = extract_target(null, dataset),
@@ -265,13 +265,14 @@ mixedwindow <- function(null, alt, dataset, R, vcv = var,
   estimates$pvalue <- pnorm(estimates$tstat, lower.tail = FALSE)
   return(estimates)
 }
-@ [[mixedwindow_calculation]] constructs the \oos\ processes and then %def mixedwindow
+@ %def mixedwindow
+[[mixedwindow_calculation]] constructs the \oos\ processes and then 
 them to the [[dmw_calculation]] function to generate the
 final statistics.  It might seem a little silly to have
 [[mixedwindow]] and [[mixedwindow_calculation]] as distinct functions,
 but we reuse [[mixedwindow_calculation]] in the bootstrap.
 
-<<mixedwindow.R>>=
+<<dmw.R>>=
 mixedwindow_calculation <- function(y, X, forecasts.null, forecasts.alt, vcv,
                                     pimethod = "estimate") {
   X <- as.matrix(X)
@@ -287,8 +288,8 @@ mixedwindow_calculation <- function(y, X, forecasts.null, forecasts.alt, vcv,
   dmw_calculation(f = errors.null^2 - errors.alt^2 + forecast.differences^2,
                   h = errors.null * X[oos,,drop = FALSE],
                   R = nobs - noos, vcv = vcv,
-                  tBtF = 2 * solve(crossprod(X) / nobs, 
-                           colMeans(forecast.differences * X[oos,,drop=FALSE])),
+                  tBtF = 2 * solve(crossprod(X) / nobs,
+                    colMeans(forecast.differences * X[oos,,drop=FALSE])),
                   pi = pivalue, window = "recursive")
 }
 @ %def mixedwindow_calculation
@@ -306,7 +307,7 @@ The [[extendedindex]] vector automatically
 includes the first [[R]] observations so that the bootstrap population
 mean is equal to the sample mean of the data (for the circular blocks
 bootstrap).
-<<mixedwindow.R>>=
+<<dmw.R>>=
 mixedbootstrap <- function(null, alt.list, dataset, R, nboot, blocklength,
                            vcv = var, window = c("rolling", "fixed"),
                            bootstrap = c("moving", "circular", "stationary"),
