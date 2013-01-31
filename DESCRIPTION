@@ -6,6 +6,7 @@ Author: Gray Calhoun
 Maintainer: Gray Calhoun <gcalhoun@iastate.edu>
 Description: Functions for out-of-sample comparisons of forecasting models
 Depends: R(>= 2.10), MASS
+Suggests: testthat
 License: GPL (>= 3)
 LazyLoad: yes
 LazyData: yes
