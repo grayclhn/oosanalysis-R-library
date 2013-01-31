@@ -5,7 +5,8 @@
 \description{This function generates data from a user-specified Vector
   Autoregression (\VAR)}
 \usage{
-rvar(nobs, coefficients, intercept, vcv, nburn = 1000, y0 = rep(0, nterms))
+rvar(nobs, coefficients, intercept, vcv, nburn = 1000,
+     y0 = matrix(0, nlag, neq))
 }
 \arguments{
   \item{nobs}{Integer; the number of observations to generate.}
@@ -16,7 +17,7 @@ rvar(nobs, coefficients, intercept, vcv, nburn = 1000, y0 = rep(0, nterms))
     matrix of the innovations.}
   \item{nburn}{An integer, the number of draws to discard before
     generating draws from the \VAR.}
-  \item{y0}{A vector containing the inital values of the series.}
+  \item{y0}{A matrix containing the inital values of the series.}
 }
 \details{Let \eqn{\beta_1} represent the first element of the
   coefficients list and suppose that there are \eqn{k} equations with
@@ -35,6 +36,7 @@ rvar(nobs, coefficients, intercept, vcv, nburn = 1000, y0 = rep(0, nterms))
 d <- rvar(10000, list(a = c(0.5, 0, 0.2, 0.1),
                       b = c(0.1, 0.2, 0.5, 0)),
           c(4, 6), diag(2))
+
 lm(a ~ aL1 + aL2 + bL1 + bL2, data = d)
 lm(b ~ aL1 + aL2 + bL1 + bL2, data = d)
 }
