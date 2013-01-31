@@ -13,17 +13,6 @@
 ## For a copy of the GNU General Public License, please see
 ## <http://www.r-project.org/Licenses/>.
 
-findInterval_presorted <- 
- function(x, vec, rightmost.closed = FALSE, all.inside = FALSE) {
-    nx <- length(x)
-    index <- integer(nx)
-    .C("find_interv_vec", xt = as.double(vec), n = length(vec), 
-       x = as.double(x), nx = nx, as.logical(rightmost.closed), 
-       as.logical(all.inside), index, DUP = FALSE, NAOK = TRUE, 
-       PACKAGE = "base")
-    return(index)
-}
-
 mccracken_criticalvalue <- 
   function(pi, k2, confidence, window = c("recursive", "rolling", "fixed")) {
     window <- match.arg(window)
@@ -33,7 +22,7 @@ mccracken_criticalvalue <-
     } else if (pi >= PiBounds[2]) {
       return(McCrackenData[[window]][length(PiIntervals), confidenceIndex, k2])
     } else {
-      leftIndex <- findInterval_presorted(pi, PiIntervals)
+      leftIndex <- findInterval(pi, PiIntervals)
       piLeft <- PiIntervals[leftIndex]
       wRight <- (pi - piLeft) / (PiIntervals[leftIndex + 1] - piLeft)
       critLeft <- McCrackenData[[window]][leftIndex, confidenceIndex, k2]
