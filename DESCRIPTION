@@ -10,4 +10,4 @@ Suggests: testthat
 License: GPL (>= 3)
 LazyLoad: yes
 LazyData: yes
-Version: 0.3.0
+Version: 0.3.1
