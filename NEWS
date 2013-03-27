@@ -1,4 +1,7 @@
-version 0.3.0:
+- Unpacked code from noweb document and moved to a more traditional package
+  layout.
+
+v0.3.0:
 
 - Reworded the titles of some of the package files to reflect that
   it's a stand alone document now.
@@ -11,18 +14,18 @@ version 0.3.0:
 - Gave users the option of estimating pi or setting it tin Inf in
   mixedwindow.
 
-version 0.2.2:
+v0.2.2:
 
 - Fixed a bug in the Makefile dependency
 
-version 0.2.1:
+v0.2.1:
 
 - Fixed a bug in mixedbootstrap that causes it to return all NULL entries.
 - Changed mixedwindow to use pi = Inf instead of the estimated value
 - Updated code to simulate from VARs
 - Fixed dmw_lambda so that it works with pi = 0 or Inf
 
-version 0.2.0:
+v0.2.0:
 
 This is the first version that I'm going to start trying to care about
 things like a "NEWS" file, decent log messages when I commit, etc.

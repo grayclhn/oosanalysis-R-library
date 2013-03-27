@@ -1,9 +1,3 @@
-auto/
-
-R/*
-oosanalysis/R
-oosanalysis/inst/doc
-
 *~
 *.Rout
 *.Rcheck
@@ -13,17 +7,4 @@ oosanalysis/inst/doc
 *.done
 *.local
 *.db
-FixedWindowPackage
-fwPackage.bzr
 .Rhistory
-check
-install
-online
-old-files
-data
-R
-NAMESPACE
-inst
-oosanalysis/noweb/AllRefs.bib
-oosanalysis/DESCRIPTION
-oosanalysis.pdf
