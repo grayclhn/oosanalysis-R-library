@@ -16,10 +16,11 @@
 dmw_calculation <- function(f, h, R, vcv, tBtF = NULL, pi = noos / R,
                             window = c("recursive", "rolling", "fixed")) {
   noos <- length(f)
-  lambda <- dmw_lambda(pi, window)
   htBtF <- if (is.null(tBtF)) {
+    lambda <- list(fh = 0, hh = 0)
     rep(0, noos) 
   } else {
+    lambda <- dmw_lambda(pi, window)
     tcrossprod(as.matrix(h), matrix(tBtF, nrow = 1))
   }
   S <- vcv(cbind(f, htBtF))
