@@ -1,3 +1,11 @@
+v0.3.2:
+
+- Updates documentation
+- Tweaks implementation of DMW to reduce external function calls.
+
+v0.3.1:
+
+- Fixed some typos in rvar and moved files around in the directory
 - Unpacked code from noweb document and moved to a more traditional package
   layout.
 
