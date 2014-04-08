@@ -10,6 +10,7 @@ export(
   extract_target,
   extract_predictors,
   HasMethod,
+  makecorr,
   mccracken_criticalvalue,
   mixedbootstrap,
   mixedwindow,
