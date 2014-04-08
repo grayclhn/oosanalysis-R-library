@@ -15,17 +15,23 @@
 
 dmw_calculation <- function(f, h, R, vcv, tBtF = NULL, pi = noos / R,
                             window = c("recursive", "rolling", "fixed")) {
-  noos <- length(f)
+  f <- as.matrix(f)
+  noos <- nrow(f)
+  nmod <- ncol(f)
   htBtF <- if (is.null(tBtF)) {
     lambda <- list(fh = 0, hh = 0)
     rep(0, noos) 
   } else {
     lambda <- dmw_lambda(pi, window)
-    tcrossprod(as.matrix(h), matrix(tBtF, nrow = 1))
+    tcrossprod(as.matrix(h), t(tBtF))
   }
   S <- vcv(cbind(f, htBtF))
-  return(list(mu = mean(f), avar = S[1,1] + lambda$fh * (S[1,2] + S[2,1]) 
-                                   + lambda$hh * S[2,2]))
+  ## indices in S corresponding to the "f" and "h" elements
+  fi <- 1:nmod
+  hi <- (nmod+1):(2*nmod)
+  return(list(mu = colMeans(f),
+              avar = S[fi,fi] + lambda$fh * (S[fi,hi] + S[hi,fi]) +
+                     lambda$hh * S[hi,hi]))
 }
 
 dmw_lambda <- function(pi, window = c("recursive", "rolling", "fixed")) {
