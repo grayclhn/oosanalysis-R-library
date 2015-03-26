@@ -1,18 +1,4 @@
-## This package is copyright (c) 2011-2013 by Gray Calhoun
-## <gray@clhn.co>.
-
-## This program is free software: you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation, either version 3 of the
-## License, or (at your option) any later version.
-
-## This program is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-## General Public License for more details.
-
-## For a copy of the GNU General Public License, please see
-## <http://www.r-project.org/Licenses/>.
+## Copyright (C) 2011-2015 Gray Calhoun; MIT license
 
 PiIntervals <- c(0, .1, seq(from = 0.2, to = 2.0, by = .2))
 PiBounds <- range(PiIntervals)

@@ -1,3 +1,5 @@
+## Copyright (C) 2011-2015 Gray Calhoun; MIT license
+
 test_that("dmw_lambda works as expected", {
   expect_that(dmw_lambda(Inf, "recursive"), equals(list(fh = 1, hh = 2)))
   expect_that(dmw_lambda(Inf, "rolling"),   equals(list(fh = 1, hh = 1)))
