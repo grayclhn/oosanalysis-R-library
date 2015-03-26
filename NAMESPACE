@@ -1,6 +1,23 @@
-export(clarkwest, mixedwindow, mixedbootstrap, recursive_forecasts, stepm,
-       dmw_calculation, bootindex_circularblock, bootindex_movingblock,
-       extract_target, extract_predictors, CT, Aggregate, HasMethod,
-       predict.CT, predict.Aggregate, rvar, bootindex_stationary, 
-       mccracken_criticalvalue, dmw_mse)
+export(
+  Aggregate,
+  bootindex_circularblock,
+  bootindex_movingblock,
+  bootindex_stationary,
+  clarkwest,
+  CT,
+  dmw_calculation,
+  dmw_mse,
+  extract_target,
+  extract_predictors,
+  HasMethod,
+  makecorr,
+  mccracken_criticalvalue,
+  mixedbootstrap,
+  mixedwindow,
+  predict.Aggregate,
+  predict.CT,
+  recursive_forecasts,
+  rvar,
+  stepm)
+
 importFrom(MASS, mvrnorm)

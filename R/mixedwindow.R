@@ -3,13 +3,19 @@
 mixedwindow <- function(null, alt, dataset, R, vcv = var,
                       window = c("rolling", "fixed"), pimethod = "estimate") {
   nobs <- nrow(dataset)
+  if (!is.list(alt)) {
+    altforecasts <- recursive_forecasts(alt, dataset, R, window)
+  } else {
+    altforecasts <- sapply(alt, function(a)
+                           recursive_forecasts(a, dataset, R, window))
+  }
   estimates <-
     mixedwindow_calculation(y = extract_target(null, dataset),
                             X = extract_predictors(null, dataset),
                             recursive_forecasts(null, dataset, R, "recursive"),
-                            recursive_forecasts(alt, dataset, R, window),
+                            altforecasts,
                             vcv = vcv, pimethod = pimethod)
-  estimates$tstat <- with(estimates, mu * sqrt((nobs - R) / avar))
+  estimates$tstat <- with(estimates, mu * sqrt((nobs - R) / diag(avar)))
   estimates$pvalue <- pnorm(estimates$tstat, lower.tail = FALSE)
   return(estimates)
 }
@@ -30,7 +36,7 @@ mixedwindow_calculation <- function(y, X, forecasts.null, forecasts.alt, vcv,
                   h = errors.null * X[oos,,drop = FALSE],
                   R = nobs - noos, vcv = vcv,
                   tBtF = 2 * solve(crossprod(X) / nobs,
-                    colMeans(forecast.differences * X[oos,,drop=FALSE])),
+                    crossprod(X[oos,,drop=FALSE], forecast.differences) / noos),
                   pi = pivalue, window = "recursive")
 }
 
