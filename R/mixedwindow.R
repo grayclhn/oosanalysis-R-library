@@ -15,7 +15,11 @@ mixedwindow <- function(null, alt, dataset, R, vcv = var,
                             recursive_forecasts(null, dataset, R, "recursive"),
                             altforecasts,
                             vcv = vcv, pimethod = pimethod)
-  estimates$tstat <- with(estimates, mu * sqrt((nobs - R) / diag(avar)))
+  if (is.matrix(estimates$avar)) {
+    estimates$tstat <- with(estimates, mu * sqrt((nobs - R) / diag(avar)))
+  } else {
+    estimates$tstat <- with(estimates, mu * sqrt((nobs - R) / avar))
+  }
   estimates$pvalue <- pnorm(estimates$tstat, lower.tail = FALSE)
   return(estimates)
 }
