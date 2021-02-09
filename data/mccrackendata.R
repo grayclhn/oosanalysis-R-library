@@ -3,7 +3,7 @@
 PiIntervals <- c(0, .1, seq(from = 0.2, to = 2.0, by = .2))
 PiBounds <- range(PiIntervals)
 McCrackenData <- list()
-McCrackenData[["rolling"]] <- array(dim = c(12, 3, 10), dimnames = c("pi", "confidence", "k2"), 
+McCrackenData[["rolling"]] <- array(dim = c(12, 3, 10), dimnames = list(NULL, c("pi", "confidence", "k2"), NULL), 
   data = 
   c(2.326,1.875,1.799,1.604, 1.447, 1.340, 1.221, 1.179, 1.098, 1.021, 0.969, 0.882,
     1.645,1.251,1.117,0.970, 0.859, 0.722, 0.651, 0.575, 0.510, 0.455, 0.382, 0.334,
@@ -36,7 +36,7 @@ McCrackenData[["rolling"]] <- array(dim = c(12, 3, 10), dimnames = c("pi", "conf
     1.645,1.068,0.872,0.443, 0.133,-0.038,-0.258,-0.466,-0.605,-0.765,-0.909,-1.011,
     1.280,0.727,0.500,0.138,-0.144,-0.374,-0.568,-0.757,-0.902,-1.045,-1.167,-1.288))
 
-McCrackenData[["recursive"]] <- array(dim = c(12, 3, 10), dimnames = c("pi", "confidence", "k2"), 
+McCrackenData[["recursive"]] <- array(dim = c(12, 3, 10), dimnames = list(NULL, c("pi", "confidence", "k2"), NULL), 
   data =
   c(2.326,1.921,1.784,1.625,1.515, 1.462, 1.436, 1.413, 1.343, 1.316, 1.274, 1.238,
     1.645,1.245,1.111,0.994,0.971, 0.863, 0.771, 0.740, 0.705, 0.671, 0.638, 0.610,
@@ -69,7 +69,7 @@ McCrackenData[["recursive"]] <- array(dim = c(12, 3, 10), dimnames = c("pi", "co
     1.645,1.082,0.890,0.566,0.358, 0.205, 0.043,-0.072,-0.162,-0.222,-0.296,-0.339,
     1.280,0.749,0.529,0.226,0.032,-0.130,-0.248,-0.355,-0.454,-0.524,-0.591,-0.651))
 
-McCrackenData[["fixed"]] <- array(dim = c(12, 3, 10), dimnames = c("pi", "confidence", "k2"), 
+McCrackenData[["fixed"]] <- array(dim = c(12, 3, 10), dimnames = list(NULL, c("pi", "confidence", "k2"), NULL), 
   data =
   c(2.326,2.201,2.051,1.974,2.061, 2.037, 2.024, 1.992, 2.018, 1.996, 2.016, 1.993,
     1.645,1.506,1.416,1.364,1.428, 1.346, 1.252, 1.301, 1.293, 1.249, 1.235, 1.218,
